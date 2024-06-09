@@ -13,8 +13,8 @@
     ],
     "author": "https://github.com/emptioapp",
     "license": "MIT",
-    "main": "./index.tsx",
-    "types": "./types/index.tsx",
+    "main": "./src/index.tsx",
+    "types": "./src/types/index.tsx",
     "devDependencies": {
         "@types/jest": "^29.5.12",
         "@types/node": "^20.14.2",
