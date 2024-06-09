@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "outDir": "src/dist/js"
+    },
+    "paths": {
+        "@/*": [
+            "./*"
+        ]
+    },
+    "include": [
+        "./**/*.ts",
+        "./**/*.tsx"
+    ],
+    "exclude": [
+        "node_modules",
+        "<node_internals>/**",
+        "bin/**"
+    ]
+}
