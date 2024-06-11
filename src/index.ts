@@ -8,8 +8,3 @@ export function buildTransaction(tx: Transaction) {
 
     console.log(`return transaction in the version ${tx.version}}`)
 }
-
-module.exports = {
-    generateKeyPair,
-    buildTransaction
-}
