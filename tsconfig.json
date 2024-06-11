@@ -5,16 +5,17 @@
         "module": "commonjs",
         "esModuleInterop": true,
         "outDir": "./dist",
-        "rootDir": "./src"
+        "rootDir": "./"
     },
     "paths": {
         "@/*": [
-            "./*"
+            "./src/*"
         ]
     },
     "include": [
         "./**/*.ts",
-        "./**/*.tsx"
+        "./**/*.js",
+        "./**/*.mjs"
     ],
     "exclude": [
         "node_modules",
