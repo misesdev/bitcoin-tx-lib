@@ -1,4 +1,4 @@
-import { bytesToHex, checksum, hexToBytes, reverseEndian, ripemd160, sha256 } from "./utils"
+import { bytesToHex, checksum, hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseEndian, ripemd160, sha256 } from "./utils"
 
 describe("utils", () => {
     it("bytes to hex string", () => {
@@ -78,5 +78,29 @@ describe("utils", () => {
         expect(letleEndian[1]).toBe(0xf8)
         expect(letleEndian[2]).toBe(0x45)
         expect(letleEndian[3]).toBe(0x80)
+    })
+    it("convert a number integer in hexadecimal", () => {
+        var hexNumber = numberToHex(1, 32) // 32bits
+        expect(hexNumber).toBe("00000001")
+
+        hexNumber = numberToHex(0, 32)
+        expect(hexNumber).toBe("00000000")
+    })
+    it("convert a number integer in hexadecimal(little-endian)", () => {
+        var hexNumber = numberToHexLE(1, 32) // 32bits
+        expect(hexNumber).toBe("01000000")
+
+        hexNumber = numberToHexLE(0, 32)
+        expect(hexNumber).toBe("00000000")
+    })
+    it("generate script from hash160", () => {
+
+        var script = hash160ToScript("18ba14b3682295cb05230e31fecb000892406608")
+
+        expect(script).toBe("76a91418ba14b3682295cb05230e31fecb00089240660888ac")
+
+        script = hash160ToScript("6bf19e55f94d986b4640c154d864699341919511")
+
+        expect(script).toBe("76a9146bf19e55f94d986b4640c154d86469934191951188ac")
     })
 }) 

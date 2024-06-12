@@ -1,13 +1,6 @@
 const Ecc = require('elliptic').ec
-import { Hex } from "./types"
+import { BNetwork, ECOptions, Hex } from "./types"
 import { base58Decode, base58Encode, checksum, hexToBytes, ripemd160, sha256 } from "./utils";
-
-type BNetwork = "testnet" | "mainet"
-
-interface ECOptions {
-    network?: BNetwork,
-    privateKey?: Hex
-}
 
 export class ECPairKey {
 
