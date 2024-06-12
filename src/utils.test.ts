@@ -1,4 +1,4 @@
-import { bytesToHex, hexToBytes, reverseEndian, ripemd160, sha256 } from "./utils"
+import { bytesToHex, checksum, hexToBytes, reverseEndian, ripemd160, sha256 } from "./utils"
 
 describe("utils", () => {
     it("bytes to hex string", () => {
@@ -35,16 +35,17 @@ describe("utils", () => {
         // deve ocorrer um erro de validação, pois o valor está incorreto
         expect(error).toBe(true)
     })
-    it("hash sha256, checksum and hash256", () => {
+    it("hash sha256 and hash256", () => {
         const hash = sha256(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"))
 
         expect(hash).toBeDefined()
 
-        const checksum = sha256(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"), true)
-        expect(String(checksum).toUpperCase()).toBe("507A5B8D")
-
-        const hash256 = sha256(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"), false, true)
+        const hash256 = sha256(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"), true)
         expect(hash256).toBe("507a5b8dfed0fc6fe8801743720cedec06aa5c6fca72b07c49964492fb98a714")
+    })
+    it("hash checksum", () => {
+        const checksumBytes = checksum(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"))
+        expect(String(checksumBytes).toUpperCase()).toBe("507A5B8D")
     })
     it("hash ripemd160", () => {
 

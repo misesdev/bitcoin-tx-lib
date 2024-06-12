@@ -7,20 +7,34 @@ describe("ECPairKey", () => {
         expect(PairKey.privateKey).toBeDefined()
     })
     it("get the public key", () => {
-        const pairKey = new ECPairKey("0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D");
+        const pairKey = new ECPairKey({ privateKey: "0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D" });
 
         const publicKey = pairKey.getPublicKey()
 
         expect(publicKey).toBe("04d0de0aaeaefad02b8bdc8a01a1b8b11c696bd3d66a2c5f10780d95b7df42645cd85228a6fb29940e858e7e55842ae2bd115d1ed7cc0e82d934e929c97648cb0a")
     })
+    it("get compressed public key", () => {
+        var pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ")
+
+        const compressed = pairKey.getPublicKeyCompressed()
+
+        expect(compressed).toBe("qWxvCXDvALEvQJriaWj7Pucs8e8N4jzNez2mnrCotqKH")
+    })
     it("get private key WIF", () => {
-        const pairKey = new ECPairKey("0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D");
+        const pairKey = new ECPairKey({ privateKey: "0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D" });
 
         expect(pairKey.getWif()).toBe("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ");
     })
+    it("get public key WIF", () => {
+        const pairKey = new ECPairKey({ privateKey: "0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D" })
+
+        const publicWif = pairKey.getPublicWif()
+
+        expect(publicWif).toBe("KwdMAjGmerYanjeui5SHS7JkmpZvVipYvB2LJGU1ZxJwYvP98617")
+    })
     it("sign and verify signature", () => {
 
-        const pairKey = new ECPairKey("0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D");
+        const pairKey = new ECPairKey({ privateKey: "0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D" });
 
         const signature = pairKey.signHash("my name is optmus prime")
 

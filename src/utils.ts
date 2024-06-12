@@ -37,13 +37,11 @@ export function hexToBytes(hex: string, hexadecimal: boolean = true): Uint8Array
     return bytes;
 }
 
-export function sha256(messageHash: Uint8Array, checksum: boolean = false, hash256: boolean = false): Hex {
+export function sha256(messageHash: Uint8Array, hash256: boolean = false): Hex {
 
     var hash = cryptojs.SHA256(messageHash)
 
-    if (checksum)
-        return cryptojs.SHA256(hexToBytes(hash)).substring(0, 8)
-
+    // if is a hash256 return sha256(sha256(content)) (doc: https://en.bitcoin.it/wiki/BIP_0174)
     if(hash256)
         return cryptojs.SHA256(hexToBytes(hash))
 
@@ -52,11 +50,19 @@ export function sha256(messageHash: Uint8Array, checksum: boolean = false, hash2
 
 export function ripemd160(messageHash: Uint8Array, address: boolean = false): Hex {
 
-    var hash = address ? hexToBytes(sha256(messageHash).toString()) : messageHash
+    var hash = address ? hexToBytes(String(sha256(messageHash))) : messageHash
 
     hash = ripemd160Noble(hash)
 
     return bytesToHex(hash)
+}
+
+export function checksum(messageHash: Uint8Array) {
+    
+    // generate the hash256(sha256(content)) and return first 4 bytes (doc: https://en.bitcoin.it/wiki/BIP_0174)
+    var hash = cryptojs.SHA256(messageHash)
+
+    return cryptojs.SHA256(hexToBytes(hash)).substring(0, 8)
 }
 
 export function reverseEndian(bytes: Uint8Array) : Uint8Array {
