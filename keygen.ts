@@ -1,4 +1,4 @@
-import { Hex } from "./types"
+import { Hex } from "./src/types"
 const cryptojs = require("cryptojs").Crypto
 
 

@@ -20,12 +20,6 @@ export interface Transaction {
     locktime: number
 }
 
-export interface PairKey {
-    privateKey: string,
-    getPublicKey: () => string,
-    sign: (hashMessage: string) => string
-}
-
 export type Hex = Bytes | string;
 
 export type Key = Hex | bigint
