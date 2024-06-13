@@ -110,7 +110,7 @@ export function numberToHexLE(number: number = 0, bits: number = 64): string {
 // 
 export function hash160ToScript(hash160: string): string {
 
-    var hash160Length = (hash160.length / 2).toString(16) // 0x14 == 20
+    var hash160Length = numberToHex(hash160.length / 2, 8) // 0x14 == 20
 
     var hexScript = OP_CODES.OP_DUP + OP_CODES.OP_HASH160 + hash160Length + hash160 + OP_CODES.OP_EQUALVERIFY + OP_CODES.OP_CHECKSIG
 

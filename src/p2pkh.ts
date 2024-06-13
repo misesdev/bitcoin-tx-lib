@@ -1,21 +1,16 @@
+import { BTransaction } from "../txbase";
 import { SIGHASH_ALL } from "./constants/generics";
-import { ECPairKey } from "./ecpairkey";
 import { InputScript, InputTransaction, OutPutScript, OutputTransaction } from "./types";
 import { base58Decode, bytesToHex, hash160ToScript, hexToBytes, numberToHex, numberToHexLE, sha256 } from "./utils";
 
-export class P2PKH {
+export class P2PKH extends BTransaction {
 
-    public pairKey: ECPairKey;
     public version: number = 0
     public locktime: number = 0
     public inputs: InputTransaction[] = []
     private inputScripts: InputScript[] = []
     public outputs: OutputTransaction[] = []
     private outputScripts: OutPutScript[] = []
-
-    constructor(pairKey: ECPairKey) {
-        this.pairKey = pairKey
-    }
 
     public addInput(input: InputTransaction) {
         this.inputs.push(input)
@@ -27,28 +22,32 @@ export class P2PKH {
 
     public build(): string {
 
+        this.outputScripts = []
+
         this.outputs.forEach(out => {
             // value little-endian
-            var hexValue = String(numberToHexLE(out.value, 64)) // 64bits
-            var hash160 = String(base58Decode(out.address)).substr(2, 40) // the 20 bytes -> 160 bits
+            var hexValue = numberToHexLE(out.value, 64) // 64bits
+            var hash160 = base58Decode(out.address).substr(2, 40) // the 20 bytes -> 160 bits
 
             // var hash160Length = (hash160.length / 2).toString(26) // 0x14 == 20
             var hexScript = hash160ToScript(hash160) //OP_CODES.OP_DUP + OP_CODES.OP_HASH160 + hash160Length + hash160 + OP_CODES.OP_EQUALVERIFY + OP_CODES.OP_CHECKSIG
-            var hexScriptLength = (hexScript.length / 2).toString(16) // ~0x19 = ~25
+            var hexScriptLength = numberToHex(hexScript.length / 2, 8) // ~0x19 = ~25
 
             this.outputScripts.push({ hexValue, hexScriptLength, hexScript })
         })
 
+        this.inputScripts = []
+
         this.inputs.forEach(input => {
 
-            var hexTxid = bytesToHex(hexToBytes(input.txid).reverse()).toString() // txid little endian
-            var hexTxindex = numberToHexLE(input.txindex, 32).toString() // little-endian
+            var hexTxid = bytesToHex(hexToBytes(input.txid).reverse()) // txid little endian
+            var hexTxindex = numberToHexLE(input.txindex, 32) // little-endian
 
             // var hash160 = String(base58Decode(input.address)).substr(2, 40) // the 20 bytes -> 160 bits
             var hexScript = input.scriptPubkey // hash160ToScript()
-            var hexScriptLength = (hexScript.length / 2).toString(16)
+            var hexScriptLength = numberToHex(hexScript.length / 2, 8)
 
-            var hexSequence = "ffffffff" // 0xffffffff - 32bits
+            var hexSequence = input.sequence ? numberToHexLE(input.sequence, 32) : "ffffffff" // 0xffffffff - 32bits
 
             this.inputScripts.push({ hexTxid, hexTxindex, hexScript, hexScriptLength, hexSequence })
         })
@@ -56,44 +55,70 @@ export class P2PKH {
         // signs the transaction => generates the signed script and puts it in hexScriptSig
         this.sign()
 
-        // console.log(this.inputScripts)
-        // console.log(this.outputScripts)
+        return this.buildRow()
+    }
 
-        return "transaction bytes"
+    public getTxid() {
+        var transactionRow = this.build()
+
+        var hash256 = sha256(hexToBytes(transactionRow), true)
+        
+        // return hash256 little-endian
+        return bytesToHex(hexToBytes(hash256).reverse())
     }
 
     private sign() {
 
-        var hexTransaction: string = ""
-        // lock transaction version
-        hexTransaction += numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
+        this.inputScripts.forEach(input => {
 
-        // lock number of imputs
-        hexTransaction += numberToHex(this.inputs.length, 8) // hexadecimal 8bits 1 = 01
+            var hexTransaction: string = this.buildRow(true)
+
+            input.hexScriptSig = this.buildSignature(hexTransaction)
+        })
+    }
+
+    private buildRow(toSign: boolean = false) {
+
+        var hexTransaction: string = ""
+
+        if (!toSign) {
+            // lock transaction version
+            hexTransaction += numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
+
+            // lock number of imputs 
+            hexTransaction += numberToHex(this.inputs.length, 8) // hexadecimal 8bits 1 = 01
+        }
 
         this.inputScripts.forEach(input => {
+            if (toSign) {
+                // lock transaction version
+                hexTransaction += numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
+
+                // lock number of imputs (always 1 because this is just for subscription)
+                hexTransaction += numberToHex(1, 8)// hexadecimal 8bits 1 = 01
+            }
             // lock txid in little-endian
             hexTransaction += input.hexTxid
-            
+
             // lock txindex hexadecimal 32bits little-endian
             hexTransaction += input.hexTxindex
-            
+
             // lock script length hexadecimal int8 1 = 01
-            hexTransaction += input.hexScriptLength
-            
+            hexTransaction += toSign ? input.hexScriptLength : numberToHex((input.hexScriptSig ?? "ff")?.length / 2, 8)
+
             // lock length hexadecimal int8bits + script of last utxo
-            hexTransaction += input.hexScript
-            
+            hexTransaction += toSign ? input.hexScript : input.hexScriptSig
+
             // lock sequence utxo
             hexTransaction += input.hexSequence
-            
+
             // lock number of outputs hexadecimal int8bits
             hexTransaction += numberToHex(this.outputs.length, 8) // hexadecimal 8bits 1 = 01
-            
+
             this.outputScripts.forEach(output => {
                 // lock amount hexadecimal little-endian int64bits 1 = 0100000000000000
                 hexTransaction += output.hexValue
-                
+
                 // lock script length hexadecimal int8 1 = 01
                 hexTransaction += output.hexScriptLength
 
@@ -104,20 +129,19 @@ export class P2PKH {
             // set locktime hexadecimal int32bits little-endian 1 = 01000000
             hexTransaction += numberToHexLE(this.locktime, 32)
 
-            // set locktime hexadecimal int32bits little-endian 1 = 01000000
-            hexTransaction += numberToHexLE(1, 32)
-
-            input.hexScriptSig = this.buildSignature(hexTransaction)
-
-            console.log(input.hexScriptSig)
+            if (toSign)
+                // set SIGHASH_ALL hexadecimal int32bits little-endian 1 = 01000000
+                hexTransaction += numberToHexLE(1, 32)
         })
+
+        return hexTransaction
     }
 
     private buildSignature(hexTransaction: string) {
 
         // generate the hash250 from transaction hex
         var hash256 = sha256(hexToBytes(hexTransaction), true)
-        
+
         // generate the signature from hash256 of transaction hex
         var signature = this.pairKey.signHash(hash256)
 
@@ -129,7 +153,7 @@ export class P2PKH {
 
         var compressedPublicKey = base58Decode(this.pairKey.getPublicKeyCompressed())
 
-        var compressedPublicKeyLength = numberToHex(compressedPublicKey.length, 8) // hexadecimal int8bits 1 = 01
+        var compressedPublicKeyLength = numberToHex(compressedPublicKey.length / 2, 8) // hexadecimal int8bits 1 = 01
 
         var scriptSigned = signature + compressedPublicKeyLength + compressedPublicKey
 
