@@ -1,14 +1,12 @@
 import { ECPairKey } from "./src/ecpairkey";
 import { P2PKH } from "./src/p2pkh";
-import { base58Encode, checksum, hexToBytes } from "./src/utils";
 
-var pairKey = new ECPairKey({ network: "testnet" })
+var pairKey = new ECPairKey({ privateKey: "16260783e40b16731673622ac8a5b045fc3ea4af70f727f3f9e92bdd3a1ddc42", network: "testnet" })
+
 var transaction = new P2PKH(pairKey)
 
-var address = "6f6bf19e55f94d986b4640c154d864699341919511"
-address += checksum(hexToBytes(address))
-address = base58Encode(address)
-console.log("my address", address)
+transaction.version = 1
+transaction.locktime = 0
 
 transaction.addInput({
     txindex: 0,
@@ -22,7 +20,7 @@ transaction.addOutput({
 })
 
 transaction.addOutput({
-    address: address,
+    address: "mqMi3XYqsPvBWtrJTk8euPWDVmFTZ5jHuK",//pairKey.getAddress(),
     value: 61900000
 })
 

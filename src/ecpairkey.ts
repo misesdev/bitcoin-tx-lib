@@ -1,6 +1,6 @@
 const Ecc = require('elliptic').ec
 import { BNetwork, ECOptions, Hex } from "./types"
-import { base58Decode, base58Encode, checksum, hexToBytes, ripemd160, sha256 } from "./utils";
+import { base58Decode, base58Encode, bytesToHex, checksum, hexToBytes, ripemd160, sha256 } from "./utils";
 
 export class ECPairKey {
 
@@ -16,7 +16,7 @@ export class ECPairKey {
         this.privateKey = options?.privateKey ?? this.elliptic.genKeyPair().getPrivate("hex")
     }
 
-    public getPublicKey(): Hex {
+    public getPublicKey(): string {
 
         const keyPair = this.elliptic.keyFromPrivate(this.privateKey)
 
@@ -36,23 +36,23 @@ export class ECPairKey {
         return base58Encode(publicKeyCompressed)
     }
 
-    public signHash(messageHash: string): Hex {
+    public signHash(messageHash: string): string {
 
         const keyPair = this.elliptic.keyFromPrivate(this.privateKey)
 
         const signature = keyPair.sign(messageHash)
 
-        return signature.toDER()
+        return bytesToHex(signature.toDER())
     }
 
-    public verifySignature(messageHash: string, derSignature: Hex): boolean {
+    public verifySignature(messageHash: string, derSignature: string): boolean {
 
         const keyPair = this.elliptic.keyFromPrivate(this.privateKey)
 
         return keyPair.verify(messageHash, derSignature)
     }
 
-    public getWif(): Hex {
+    public getWif(): string {
 
         // bytes prefix 0x80 and 0xef (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
         var wifPrefix = this.network == "mainet" ? "80" : "ef" 
@@ -65,7 +65,7 @@ export class ECPairKey {
         return base58Encode(wif)
     }
 
-    public getPublicWif(): Hex {
+    public getPublicWif(): string {
         var prefix = this.network == "mainet" ? "80" : "ef"
 
         // the 0x01 byte added at the end indicates that it is a compressed public key (doc: https://en.bitcoin.it/wiki/Wallet_import_format)
@@ -104,9 +104,9 @@ export class ECPairKey {
         return new ECPairKey({ privateKey: String(wifHex).substring(2, wifHex.length - 8), network: options?.network });
     }
 
-    static verifyWif(wifHex: Hex) : boolean {
+    static verifyWif(wifHex: string) : boolean {
 
-        var prefix = String(wifHex).substr(0, 2)
+        var prefix = wifHex.substr(0, 2)
         
         // In hex [0x80]
         if(!this.wifPrefixes.includes(prefix.toLowerCase())) return false

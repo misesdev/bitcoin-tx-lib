@@ -34,11 +34,13 @@ describe("ECPairKey", () => {
     })
     it("sign and verify signature", () => {
 
-        const pairKey = new ECPairKey({ privateKey: "0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D" });
+        var pairKey = new ECPairKey({ privateKey: "16260783e40b16731673622ac8a5b045fc3ea4af70f727f3f9e92bdd3a1ddc42" });
 
-        const signature = pairKey.signHash("my name is optmus prime")
+        var signature = pairKey.signHash("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba")
 
-        const isValid = pairKey.verifySignature("my name is optmus prime", signature)
+        expect(signature).toBe("304402205598d37448064924b0e4b0d43f74625f1c87da0c7e56266b48081ce0fa69ec850220067581bbc97b9f7dd9d5b67fd2558e7c516c2b71c5f0f472b3e290a086a5696d")
+        
+        var isValid = pairKey.verifySignature("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba", signature)
 
         expect(isValid).toBe(true)
     })

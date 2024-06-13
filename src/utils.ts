@@ -1,10 +1,10 @@
-import { OP_CODES } from "../constants/opcodes"
-import { Hex } from "./types"
+import { OP_CODES } from "./constants/opcodes"
 import { ripemd160 as ripemd160Noble } from "@noble/hashes/ripemd160"
+
 const cryptojs = require("cryptojs").Crypto
 const base58 = require("bs58")
 
-export function bytesToHex(bytes: Uint8Array): Hex {
+export function bytesToHex(bytes: Uint8Array): string {
     if (bytes.length <= 0)
         throw new Error("The byte array is empty!")
 
@@ -38,9 +38,9 @@ export function hexToBytes(hex: string, hexadecimal: boolean = true): Uint8Array
     return bytes;
 }
 
-export function sha256(messageHash: Uint8Array, hash256: boolean = false): Hex {
+export function sha256(messageHash: Uint8Array, hash256: boolean = false): string {
 
-    var hash = cryptojs.SHA256(messageHash)
+    var hash: string = cryptojs.SHA256(messageHash)
 
     // if is a hash256 return sha256(sha256(content)) (doc: https://en.bitcoin.it/wiki/BIP_0174)
     if (hash256)
@@ -49,7 +49,7 @@ export function sha256(messageHash: Uint8Array, hash256: boolean = false): Hex {
     return hash
 }
 
-export function ripemd160(messageHash: Uint8Array, address: boolean = false): Hex {
+export function ripemd160(messageHash: Uint8Array, address: boolean = false): string {
 
     var hash = address ? hexToBytes(String(sha256(messageHash))) : messageHash
 
@@ -74,15 +74,15 @@ export function base58Encode(hex: string): string {
     return base58.encode(hexToBytes(hex))
 }
 
-export function base58Decode(value: string): Hex {
+export function base58Decode(value: string): string {
     return bytesToHex(base58.decode(value));
 }
 
-export function numberToHex(number: number = 0, bits: number = 64): Hex {
+export function numberToHex(number: number = 0, bits: number = 64): string {
 
     var hexValue = number.toString(16) // string hexadecimal
-    
-    if(hexValue.length == 1)
+
+    if (hexValue.length == 1)
         hexValue = "0" + hexValue
 
     for (let i = hexValue.length; i < bits / 4; i++) {
@@ -93,11 +93,11 @@ export function numberToHex(number: number = 0, bits: number = 64): Hex {
 }
 
 // Convert a integer number in Uint8Array(16) // 64 bits little-endian
-export function numberToHexLE(number: number = 0, bits: number = 64): Hex {
+export function numberToHexLE(number: number = 0, bits: number = 64): string {
 
     var hexValue = number.toString(16) // string hexadecimal
 
-    if(hexValue.length == 1)
+    if (hexValue.length == 1)
         hexValue = "0" + hexValue
 
     for (let i = hexValue.length; i < bits / 4; i++) {
@@ -108,7 +108,7 @@ export function numberToHexLE(number: number = 0, bits: number = 64): Hex {
 }
 
 // 
-export function hash160ToScript(hash160: string) : string {
+export function hash160ToScript(hash160: string): string {
 
     var hash160Length = (hash160.length / 2).toString(16) // 0x14 == 20
 

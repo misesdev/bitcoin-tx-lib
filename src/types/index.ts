@@ -15,7 +15,8 @@ export interface InputScript {
     hexTxindex: string,
     hexScript: string,
     hexScriptLength: string,
-    hexSequence: string
+    hexSequence: string,
+    hexScriptSig?: string
 }
 
 export interface OutputTransaction {
@@ -36,12 +37,12 @@ export interface Transaction {
     locktime: number
 }
 
-export type Hex = Bytes | string;
+export type Hex = Uint8Array;
 
 export type Key = Hex | bigint
 
 export interface ECOptions {
     network?: BNetwork,
-    privateKey?: Hex
+    privateKey?: string
 }
 

@@ -1,11 +1,14 @@
+import { SIGHASH_ALL } from "./constants/generics";
 import { ECPairKey } from "./ecpairkey";
 import { InputScript, InputTransaction, OutPutScript, OutputTransaction } from "./types";
-import { base58Decode, bytesToHex, hash160ToScript, hexToBytes, numberToHex, numberToHexLE } from "./utils";
+import { base58Decode, bytesToHex, hash160ToScript, hexToBytes, numberToHex, numberToHexLE, sha256 } from "./utils";
 
 export class P2PKH {
 
     public pairKey: ECPairKey;
-    public inputs: InputTransaction[] = [] 
+    public version: number = 0
+    public locktime: number = 0
+    public inputs: InputTransaction[] = []
     private inputScripts: InputScript[] = []
     public outputs: OutputTransaction[] = []
     private outputScripts: OutPutScript[] = []
@@ -23,7 +26,7 @@ export class P2PKH {
     }
 
     public build(): string {
-        
+
         this.outputs.forEach(out => {
             // value little-endian
             var hexValue = String(numberToHexLE(out.value, 64)) // 64bits
@@ -50,13 +53,86 @@ export class P2PKH {
             this.inputScripts.push({ hexTxid, hexTxindex, hexScript, hexScriptLength, hexSequence })
         })
 
-        console.log(this.inputScripts)
-        console.log(this.outputScripts)
+        // signs the transaction => generates the signed script and puts it in hexScriptSig
+        this.sign()
+
+        // console.log(this.inputScripts)
+        // console.log(this.outputScripts)
 
         return "transaction bytes"
     }
 
-    static create() {
+    private sign() {
+
+        var hexTransaction: string = ""
+        // lock transaction version
+        hexTransaction += numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
+
+        // lock number of imputs
+        hexTransaction += numberToHex(this.inputs.length, 8) // hexadecimal 8bits 1 = 01
+
+        this.inputScripts.forEach(input => {
+            // lock txid in little-endian
+            hexTransaction += input.hexTxid
+            
+            // lock txindex hexadecimal 32bits little-endian
+            hexTransaction += input.hexTxindex
+            
+            // lock script length hexadecimal int8 1 = 01
+            hexTransaction += input.hexScriptLength
+            
+            // lock length hexadecimal int8bits + script of last utxo
+            hexTransaction += input.hexScript
+            
+            // lock sequence utxo
+            hexTransaction += input.hexSequence
+            
+            // lock number of outputs hexadecimal int8bits
+            hexTransaction += numberToHex(this.outputs.length, 8) // hexadecimal 8bits 1 = 01
+            
+            this.outputScripts.forEach(output => {
+                // lock amount hexadecimal little-endian int64bits 1 = 0100000000000000
+                hexTransaction += output.hexValue
+                
+                // lock script length hexadecimal int8 1 = 01
+                hexTransaction += output.hexScriptLength
+
+                // set the script output
+                hexTransaction += output.hexScript
+            })
+
+            // set locktime hexadecimal int32bits little-endian 1 = 01000000
+            hexTransaction += numberToHexLE(this.locktime, 32)
+
+            // set locktime hexadecimal int32bits little-endian 1 = 01000000
+            hexTransaction += numberToHexLE(1, 32)
+
+            input.hexScriptSig = this.buildSignature(hexTransaction)
+
+            console.log(input.hexScriptSig)
+        })
+    }
+
+    private buildSignature(hexTransaction: string) {
+
+        // generate the hash250 from transaction hex
+        var hash256 = sha256(hexToBytes(hexTransaction), true)
         
+        // generate the signature from hash256 of transaction hex
+        var signature = this.pairKey.signHash(hash256)
+
+        // append the SIGHASH = ~01
+        signature += SIGHASH_ALL
+
+        // append the length of signature + SIGHASH hexadecimal int8bits 1 = 01
+        signature = numberToHex(signature.length / 2, 8) + signature
+
+        var compressedPublicKey = base58Decode(this.pairKey.getPublicKeyCompressed())
+
+        var compressedPublicKeyLength = numberToHex(compressedPublicKey.length, 8) // hexadecimal int8bits 1 = 01
+
+        var scriptSigned = signature + compressedPublicKeyLength + compressedPublicKey
+
+        return scriptSigned
     }
 }
