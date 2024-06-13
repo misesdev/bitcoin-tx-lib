@@ -1,24 +1,8 @@
-import { BTransaction } from "../txbase";
+import { BTransaction } from "./base/txbase";
 import { SIGHASH_ALL } from "./constants/generics";
-import { InputScript, InputTransaction, OutPutScript, OutputTransaction } from "./types";
-import { base58Decode, bytesToHex, hash160ToScript, hexToBytes, numberToHex, numberToHexLE, sha256 } from "./utils";
+import { base58Decode, hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseHexLE, sha256 } from "./utils";
 
 export class P2PKH extends BTransaction {
-
-    public version: number = 0
-    public locktime: number = 0
-    public inputs: InputTransaction[] = []
-    private inputScripts: InputScript[] = []
-    public outputs: OutputTransaction[] = []
-    private outputScripts: OutPutScript[] = []
-
-    public addInput(input: InputTransaction) {
-        this.inputs.push(input)
-    }
-
-    public addOutput(output: OutputTransaction) {
-        this.outputs.push(output)
-    }
 
     public build(): string {
 
@@ -27,7 +11,7 @@ export class P2PKH extends BTransaction {
         this.outputs.forEach(out => {
             // value little-endian
             var hexValue = numberToHexLE(out.value, 64) // 64bits
-            var hash160 = base58Decode(out.address).substr(2, 40) // the 20 bytes -> 160 bits
+            var hash160 = base58Decode(out.address).substring(2, 42) // the 20 bytes -> 160 bits
 
             // var hash160Length = (hash160.length / 2).toString(26) // 0x14 == 20
             var hexScript = hash160ToScript(hash160) //OP_CODES.OP_DUP + OP_CODES.OP_HASH160 + hash160Length + hash160 + OP_CODES.OP_EQUALVERIFY + OP_CODES.OP_CHECKSIG
@@ -40,10 +24,10 @@ export class P2PKH extends BTransaction {
 
         this.inputs.forEach(input => {
 
-            var hexTxid = bytesToHex(hexToBytes(input.txid).reverse()) // txid little endian
+            var hexTxid = reverseHexLE(input.txid) // txid little endian
             var hexTxindex = numberToHexLE(input.txindex, 32) // little-endian
 
-            // var hash160 = String(base58Decode(input.address)).substr(2, 40) // the 20 bytes -> 160 bits
+            // var hash160 = String(base58Decode(input.address)).substring(2, 42) // the 20 bytes -> 160 bits
             var hexScript = input.scriptPubkey // hash160ToScript()
             var hexScriptLength = numberToHex(hexScript.length / 2, 8)
 
@@ -62,9 +46,9 @@ export class P2PKH extends BTransaction {
         var transactionRow = this.build()
 
         var hash256 = sha256(hexToBytes(transactionRow), true)
-        
+
         // return hash256 little-endian
-        return bytesToHex(hexToBytes(hash256).reverse())
+        return reverseHexLE(hash256)
     }
 
     private sign() {

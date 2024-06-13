@@ -26,9 +26,9 @@ export class ECPairKey {
     }
 
     public getPublicKeyCompressed() {
-        var publicKey = String(this.getPublicKey())
+        var publicKey = this.getPublicKey()
 
-        var coordinateX = publicKey.substr(2, 64)
+        var coordinateX = publicKey.substring(2, 66)
         
         // The prefix byte 0x02 is due to the fact that the key refers to the X coordinate of the curve
         var publicKeyCompressed = "02" + coordinateX
@@ -101,18 +101,18 @@ export class ECPairKey {
         if(!this.verifyWif(wifHex))
             throw new Error("Wif type is not supported, only private key wif are suported.")
 
-        return new ECPairKey({ privateKey: String(wifHex).substring(2, wifHex.length - 8), network: options?.network });
+        return new ECPairKey({ privateKey: wifHex.substring(2, wifHex.length - 8), network: options?.network });
     }
 
     static verifyWif(wifHex: string) : boolean {
 
-        var prefix = wifHex.substr(0, 2)
+        var prefix = wifHex.substring(0, 2)
         
         // In hex [0x80]
         if(!this.wifPrefixes.includes(prefix.toLowerCase())) return false
 
-        var checksumBytes = String(wifHex).substring(wifHex.length - 8)
-        var checksumHash = String(wifHex).substring(0, wifHex.length - 8)
+        var checksumBytes = wifHex.substring(wifHex.length - 8)
+        var checksumHash = wifHex.substring(0, wifHex.length - 8)
 
         checksumHash = checksum(hexToBytes(checksumHash))
 

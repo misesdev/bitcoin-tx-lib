@@ -1,4 +1,4 @@
-import { bytesToHex, checksum, hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseEndian, ripemd160, sha256 } from "./utils"
+import { bytesToHex, checksum, hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseEndian, reverseHexLE, ripemd160, sha256 } from "./utils"
 
 describe("utils", () => {
     it("bytes to hex string", () => {
@@ -102,5 +102,10 @@ describe("utils", () => {
         script = hash160ToScript("6bf19e55f94d986b4640c154d864699341919511")
 
         expect(script).toBe("76a9146bf19e55f94d986b4640c154d86469934191951188ac")
+    })
+    it("convert hexadecimal string bytes in little-endian", () => {
+        var little = reverseHexLE("ff8099")
+
+        expect(little).toBe("9980ff")
     })
 }) 

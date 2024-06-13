@@ -31,7 +31,7 @@ export function hexToBytes(hex: string, hexadecimal: boolean = true): Uint8Array
 
     for (let i = 0; i <= hex.length; i += hexadecimal ? 2 : 1)
         if (hexadecimal)
-            bytes[i / 2] = parseInt(hex.substr(i, 2), 16)
+            bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16)
         else
             bytes[i] = hex.charCodeAt(i)
 
@@ -101,13 +101,12 @@ export function numberToHexLE(number: number = 0, bits: number = 64): string {
         hexValue = "0" + hexValue
 
     for (let i = hexValue.length; i < bits / 4; i++) {
-        hexValue = "0" + hexValue
+        hexValue = hexValue + "0"
     }
 
-    return bytesToHex(hexToBytes(hexValue).reverse())
+    return hexValue
 }
 
-// 
 export function hash160ToScript(hash160: string): string {
 
     var hash160Length = numberToHex(hash160.length / 2, 8) // 0x14 == 20
@@ -115,4 +114,21 @@ export function hash160ToScript(hash160: string): string {
     var hexScript = OP_CODES.OP_DUP + OP_CODES.OP_HASH160 + hash160Length + hash160 + OP_CODES.OP_EQUALVERIFY + OP_CODES.OP_CHECKSIG
 
     return hexScript
+}
+
+export function reverseHexLE(hex: string, isBytes: boolean = true) {
+
+    if (!!!hex)
+        throw new Error("hex is undefined or empty!")
+    if (isBytes && hex.length % 2 !== 0)
+        throw new Error("Invalid hex value!")
+    
+    let hexLE = '';
+
+    for (let i = hex.length; i > 0; i -= 2) {
+        hexLE += hex[i - 2] + hex[i - 1];
+    }
+
+    // return hexadecimal bytes in little-endian
+    return hexLE;
 }
