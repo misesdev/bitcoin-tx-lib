@@ -1,4 +1,15 @@
-import { bytesToHex, checksum, hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseEndian, reverseHexLE, ripemd160, sha256 } from "./utils"
+import { 
+    bytesToHex, 
+    checksum, 
+    hash160ToScript, 
+    hexToBytes, 
+    numberToHex, 
+    numberToHexLE, 
+    reverseEndian, 
+    reverseHexLE, 
+    ripemd160, 
+    sha256 
+} from "./utils"
 
 describe("utils", () => {
     it("bytes to hex string", () => {

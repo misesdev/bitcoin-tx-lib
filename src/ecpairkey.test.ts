@@ -7,7 +7,7 @@ describe("ECPairKey", () => {
         expect(PairKey.privateKey).toBeDefined()
     })
     it("get the public key", () => {
-        const pairKey = new ECPairKey({ privateKey: "0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D" });
+        const pairKey = new ECPairKey({ privateKey: "0c28fca386c7a227600b2fe50b7cae11ec86d3bf1fbe471be89827e19d72aa1d" });
 
         const publicKey = pairKey.getPublicKey()
 
@@ -21,12 +21,12 @@ describe("ECPairKey", () => {
         expect(compressed).toBe("qWxvCXDvALEvQJriaWj7Pucs8e8N4jzNez2mnrCotqKH")
     })
     it("get private key WIF", () => {
-        const pairKey = new ECPairKey({ privateKey: "0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D" });
+        const pairKey = new ECPairKey({ privateKey: "0c28fca386c7a227600b2fe50b7cae11ec86d3bf1fbe471be89827e19d72aa1d" });
 
         expect(pairKey.getWif()).toBe("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ");
     })
     it("get public key WIF", () => {
-        const pairKey = new ECPairKey({ privateKey: "0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D" })
+        const pairKey = new ECPairKey({ privateKey: "0c28fca386c7a227600b2fe50b7cae11ec86d3bf1fbe471be89827e19d72aa1d" })
 
         const publicWif = pairKey.getPublicWif()
 
@@ -47,7 +47,7 @@ describe("ECPairKey", () => {
     it("import from wif", () => {
         var pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ")
 
-        expect(pairKey.privateKey.toString().toUpperCase()).toBe("0C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D")
+        expect(pairKey.privateKey).toBe("0c28fca386c7a227600b2fe50b7cae11ec86d3bf1fbe471be89827e19d72aa1d")
 
         var error = false
         var wifVersionError = "25JBG1P53WpDHnB1NFd9cSCZ9QdKS3fv5hqDbMte2bChDkmVhXa"

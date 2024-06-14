@@ -1,6 +1,7 @@
+import { Base58 } from "./base/base58";
 import { BTransaction } from "./base/txbase";
 import { SIGHASH_ALL } from "./constants/generics";
-import { base58Decode, hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseHexLE, sha256 } from "./utils";
+import { hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseHexLE, sha256 } from "./utils";
 
 export class P2PKH extends BTransaction {
 
@@ -11,7 +12,7 @@ export class P2PKH extends BTransaction {
         this.outputs.forEach(out => {
             // value little-endian
             var hexValue = numberToHexLE(out.value, 64) // 64bits
-            var hash160 = base58Decode(out.address).substring(2, 42) // the 20 bytes -> 160 bits
+            var hash160 = Base58.decode(out.address).substring(2, 42) // the 20 bytes -> 160 bits
 
             // var hash160Length = (hash160.length / 2).toString(26) // 0x14 == 20
             var hexScript = hash160ToScript(hash160) //OP_CODES.OP_DUP + OP_CODES.OP_HASH160 + hash160Length + hash160 + OP_CODES.OP_EQUALVERIFY + OP_CODES.OP_CHECKSIG
@@ -135,7 +136,7 @@ export class P2PKH extends BTransaction {
         // append the length of signature + SIGHASH hexadecimal int8bits 1 = 01
         signature = numberToHex(signature.length / 2, 8) + signature
 
-        var compressedPublicKey = base58Decode(this.pairKey.getPublicKeyCompressed())
+        var compressedPublicKey = Base58.decode(this.pairKey.getPublicKeyCompressed())
 
         var compressedPublicKeyLength = numberToHex(compressedPublicKey.length / 2, 8) // hexadecimal int8bits 1 = 01
 

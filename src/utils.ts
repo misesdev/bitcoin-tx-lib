@@ -1,8 +1,6 @@
 import { OP_CODES } from "./constants/opcodes"
 import { ripemd160 as ripemd160Noble } from "@noble/hashes/ripemd160"
-
-const cryptojs = require("cryptojs").Crypto
-const base58 = require("bs58")
+import { sha256 as sha256Noble } from "@noble/hashes/sha256"
 
 export function bytesToHex(bytes: Uint8Array): string {
     if (bytes.length <= 0)
@@ -40,13 +38,13 @@ export function hexToBytes(hex: string, hexadecimal: boolean = true): Uint8Array
 
 export function sha256(messageHash: Uint8Array, hash256: boolean = false): string {
 
-    var hash: string = cryptojs.SHA256(messageHash)
+    var hash: Uint8Array = sha256Noble(messageHash)
 
     // if is a hash256 return sha256(sha256(content)) (doc: https://en.bitcoin.it/wiki/BIP_0174)
     if (hash256)
-        return cryptojs.SHA256(hexToBytes(hash))
+        return bytesToHex(sha256Noble(hash))
 
-    return hash
+    return bytesToHex(hash)
 }
 
 export function ripemd160(messageHash: Uint8Array, address: boolean = false): string {
@@ -61,21 +59,13 @@ export function ripemd160(messageHash: Uint8Array, address: boolean = false): st
 export function checksum(messageHash: Uint8Array) {
 
     // generate the hash256(sha256(content)) and return first 4 bytes (doc: https://en.bitcoin.it/wiki/BIP_0174)
-    var hash = cryptojs.SHA256(messageHash)
+    var hash = sha256Noble(messageHash)
 
-    return cryptojs.SHA256(hexToBytes(hash)).substring(0, 8)
+    return bytesToHex(sha256Noble(hash)).substring(0, 8)
 }
 
 export function reverseEndian(bytes: Uint8Array): Uint8Array {
     return bytes.reverse()
-}
-
-export function base58Encode(hex: string): string {
-    return base58.encode(hexToBytes(hex))
-}
-
-export function base58Decode(value: string): string {
-    return bytesToHex(base58.decode(value));
 }
 
 export function numberToHex(number: number = 0, bits: number = 64): string {
@@ -122,7 +112,7 @@ export function reverseHexLE(hex: string, isBytes: boolean = true) {
         throw new Error("hex is undefined or empty!")
     if (isBytes && hex.length % 2 !== 0)
         throw new Error("Invalid hex value!")
-    
+
     let hexLE = '';
 
     for (let i = hex.length; i > 0; i -= 2) {
