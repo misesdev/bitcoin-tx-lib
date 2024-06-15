@@ -1,7 +1,7 @@
 
 type Bytes = Uint8Array;
 
-export type BNetwork = "testnet" | "mainet"
+export type BNetwork = "testnet" | "mainnet"
 
 export interface InputTransaction {
     txid: string,

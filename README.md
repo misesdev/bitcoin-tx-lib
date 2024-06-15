@@ -4,7 +4,6 @@ A Typescript library for building and signing Bitcoin transactions
 
 ## Install 
 
-**NPM**
 ```bash
     npm install bitcoin-tx-lib
 ```

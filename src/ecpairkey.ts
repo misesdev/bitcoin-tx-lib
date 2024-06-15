@@ -6,14 +6,14 @@ import { bytesToHex, checksum, hexToBytes, ripemd160, sha256 } from "./utils";
 export class ECPairKey {
 
     public privateKey: string;
-    public network: BNetwork = "mainet"
+    public network: BNetwork = "mainnet"
     public cipherCurve = "secp256k1"
     static wifPrefixes = ["80", "ef"]
 
     private elliptic = new Ecc(this.cipherCurve ?? "secp256k1")
 
     constructor(options?: ECOptions) {
-        this.network = options?.network ? options?.network : "mainet"
+        this.network = options?.network ? options?.network : "mainnet"
         this.privateKey = options?.privateKey ?? this.elliptic.genKeyPair().getPrivate("hex")
     }
 
@@ -56,7 +56,7 @@ export class ECPairKey {
     public getWif(): string {
 
         // bytes prefix 0x80 and 0xef (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
-        var wifPrefix = this.network == "mainet" ? "80" : "ef"
+        var wifPrefix = this.network == "mainnet" ? "80" : "ef"
 
         var wif: string = wifPrefix + this.privateKey
 
@@ -67,7 +67,7 @@ export class ECPairKey {
     }
 
     public getPublicWif(): string {
-        var prefix = this.network == "mainet" ? "80" : "ef"
+        var prefix = this.network == "mainnet" ? "80" : "ef"
 
         // the 0x01 byte added at the end indicates that it is a compressed public key (doc: https://en.bitcoin.it/wiki/Wallet_import_format)
         var publicWif = prefix + this.privateKey + "01"
@@ -84,7 +84,7 @@ export class ECPairKey {
         var scriptRipemd160 = ripemd160(hexToBytes(publicKey.toString()), true)
 
         // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
-        var prefixAddress = this.network == "mainet" ? "00" : "6f";
+        var prefixAddress = this.network == "mainnet" ? "00" : "6f";
 
         var script = prefixAddress + scriptRipemd160.toString()
         // the last param to sha256 -> true -> sha256(sha256(script)).substring(0, 8) - is a checksum(first 4 bytes)
