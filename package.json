@@ -1,7 +1,7 @@
 {
     "name": "bitcoin-tx-lib",
     "version": "0.0.10",
-    "description": "A JavaScript library for building and signing Bitcoin transactions (with typescript)",
+    "description": "A Typescript library for building and signing Bitcoin transactions",
     "scripts": {
         "test": "jest",
         "build": "tsc"
@@ -14,8 +14,8 @@
     ],
     "author": "https://github.com/emptioapp",
     "license": "MIT",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./index.ts",
+    "types": "./index.ts",
     "devDependencies": {
         "@noble/hashes": "^1.4.0",
         "@types/jest": "^29.5.12",
