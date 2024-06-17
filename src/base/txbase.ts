@@ -3,7 +3,7 @@ import { InputScript, InputTransaction, OutPutScript, OutputTransaction } from "
 
 export class BTransaction {
 
-    public version: number = 0
+    public version: number = 1
     public locktime: number = 0
     public pairKey: ECPairKey
     public inputs: InputTransaction[] = []
