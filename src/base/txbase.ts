@@ -7,8 +7,8 @@ export class BTransaction {
     public locktime: number = 0
     public pairKey: ECPairKey
     public inputs: InputTransaction[] = []
-    protected inputScripts: InputScript[] = []
     public outputs: OutputTransaction[] = []
+    protected inputScripts: InputScript[] = []
     protected outputScripts: OutPutScript[] = []
 
     constructor(pairKey: ECPairKey) {

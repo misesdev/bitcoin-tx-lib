@@ -56,12 +56,12 @@ export function ripemd160(messageHash: Uint8Array, address: boolean = false): st
     return bytesToHex(hash)
 }
 
-export function checksum(messageHash: Uint8Array) {
+export function checksum(messageHash: Uint8Array, bytes: number = 4) {
 
     // generate the hash256(sha256(content)) and return first 4 bytes (doc: https://en.bitcoin.it/wiki/BIP_0174)
     var hash = sha256Noble(messageHash)
 
-    return bytesToHex(sha256Noble(hash)).substring(0, 8)
+    return bytesToHex(sha256Noble(hash)).substring(0, bytes * 2)
 }
 
 export function reverseEndian(bytes: Uint8Array): Uint8Array {

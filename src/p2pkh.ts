@@ -1,9 +1,15 @@
 import { Base58 } from "./base/base58";
 import { BTransaction } from "./base/txbase";
 import { SIGHASH_ALL } from "./constants/generics";
+import { ECPairKey } from "./ecpairkey";
 import { hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseHexLE, sha256 } from "./utils";
 
 export class P2PKH extends BTransaction {
+
+    constructor(pairKey: ECPairKey) {
+        super(pairKey)
+        this.version = 2
+    }
 
     public build(): string {
 
@@ -54,70 +60,67 @@ export class P2PKH extends BTransaction {
 
     private sign() {
 
-        this.inputScripts.forEach(input => {
+        this.inputScripts.forEach((input, index) => {
 
-            var hexTransaction: string = this.buildRow(true)
+            var hexTransaction: string = this.buildRow(true, index)
 
             input.hexScriptSig = this.buildSignature(hexTransaction)
         })
     }
 
-    private buildRow(toSign: boolean = false) {
+    private buildRow(toSign: boolean = false, inputToSign: number = 0) {
 
-        var hexTransaction: string = ""
+        // set transaction version
+        var hexTransaction: string = numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
 
-        if (!toSign) {
-            // lock transaction version
-            hexTransaction += numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
+        // set number of imputs 
+        hexTransaction += numberToHex(this.inputs.length, 8) // hexadecimal 8bits 1 = 01
 
-            // lock number of imputs 
-            hexTransaction += numberToHex(this.inputs.length, 8) // hexadecimal 8bits 1 = 01
-        }
-
-        this.inputScripts.forEach(input => {
-            if (toSign) {
-                // lock transaction version
-                hexTransaction += numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
-
-                // lock number of imputs (always 1 because this is just for subscription)
-                hexTransaction += numberToHex(1, 8)// hexadecimal 8bits 1 = 01
-            }
-            // lock txid in little-endian
+        this.inputScripts.forEach((input, index) => {
+            // set txid in little-endian
             hexTransaction += input.hexTxid
 
-            // lock txindex hexadecimal 32bits little-endian
+            // set txindex hexadecimal 32bits little-endian
             hexTransaction += input.hexTxindex
 
-            // lock script length hexadecimal int8 1 = 01
-            hexTransaction += toSign ? input.hexScriptLength : numberToHex((input.hexScriptSig ?? "ff")?.length / 2, 8)
+            if (toSign) {
+                // set script length hexadecimal int8 1 = 01
+                hexTransaction += inputToSign == index ? input.hexScriptLength : "00"
 
-            // lock length hexadecimal int8bits + script of last utxo
-            hexTransaction += toSign ? input.hexScript : input.hexScriptSig
+                // set length hexadecimal int8bits + script of last utxo
+                hexTransaction += inputToSign == index ? input.hexScript : ""
 
-            // lock sequence utxo
+            } else {
+                // set script length hexadecimal int8 1 = 01
+                hexTransaction += numberToHex((input.hexScriptSig ?? "ff").length / 2, 8)
+
+                // set length hexadecimal int8bits + script of last utxo
+                hexTransaction += input.hexScriptSig
+            }
+            // set sequence utxo
             hexTransaction += input.hexSequence
-
-            // lock number of outputs hexadecimal int8bits
-            hexTransaction += numberToHex(this.outputs.length, 8) // hexadecimal 8bits 1 = 01
-
-            this.outputScripts.forEach(output => {
-                // lock amount hexadecimal little-endian int64bits 1 = 0100000000000000
-                hexTransaction += output.hexValue
-
-                // lock script length hexadecimal int8 1 = 01
-                hexTransaction += output.hexScriptLength
-
-                // set the script output
-                hexTransaction += output.hexScript
-            })
-
-            // set locktime hexadecimal int32bits little-endian 1 = 01000000
-            hexTransaction += numberToHexLE(this.locktime, 32)
-
-            if (toSign)
-                // set SIGHASH_ALL hexadecimal int32bits little-endian 1 = 01000000
-                hexTransaction += numberToHexLE(1, 32)
         })
+
+        // set number of outputs hexadecimal int8bits
+        hexTransaction += numberToHex(this.outputs.length, 8) // hexadecimal 8bits 1 = 01
+
+        this.outputScripts.forEach(output => {
+            // set amount hexadecimal little-endian int64bits 1 = 0100000000000000
+            hexTransaction += output.hexValue
+
+            // set script length hexadecimal int8 1 = 01
+            hexTransaction += output.hexScriptLength
+
+            // set the script output
+            hexTransaction += output.hexScript
+        })
+
+        // set locktime hexadecimal int32bits little-endian 1 = 01000000
+        hexTransaction += numberToHexLE(this.locktime, 32)
+
+        if (toSign)
+            // set SIGHASH_ALL hexadecimal int32bits little-endian 1 = 01000000
+            hexTransaction += numberToHexLE(1, 32)
 
         return hexTransaction
     }

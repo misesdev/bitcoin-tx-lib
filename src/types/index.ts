@@ -3,6 +3,14 @@ type Bytes = Uint8Array;
 
 export type BNetwork = "testnet" | "mainnet"
 
+export type BechEncoding = "bech32" | "bech32m"
+
+export type Bech32Options = {
+    network?: "mainnet" | "testnet",
+    version?: number,
+    publicKey: string
+}
+
 export interface InputTransaction {
     txid: string,
     txindex: number,
