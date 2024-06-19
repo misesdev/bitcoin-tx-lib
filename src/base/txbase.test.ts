@@ -4,7 +4,7 @@ import { BTransaction } from "./txbase"
 describe("transaction base class", () => {
     it("add input", () => {
         let pairKey = new ECPairKey()
-        var transaction = new BTransaction(pairKey)
+        let transaction = new BTransaction(pairKey)
 
         expect(transaction.inputs.length).toBe(0)
 
@@ -19,7 +19,7 @@ describe("transaction base class", () => {
 
     it("add output", () => {
         let pairKey = new ECPairKey()
-        var transaction = new BTransaction(pairKey)
+        let transaction = new BTransaction(pairKey)
 
         expect(transaction.outputs.length).toBe(0)
 

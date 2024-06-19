@@ -13,34 +13,34 @@ export class P2PKH extends BTransaction {
 
     public build(): string {
 
-        this.outputScripts = []
-
-        this.outputs.forEach(out => {
-            // value little-endian
-            var hexValue = numberToHexLE(out.value, 64) // 64bits
-            var hash160 = Base58.decode(out.address).substring(2, 42) // the 20 bytes -> 160 bits
-
-            // var hash160Length = (hash160.length / 2).toString(26) // 0x14 == 20
-            var hexScript = hash160ToScript(hash160) //OP_CODES.OP_DUP + OP_CODES.OP_HASH160 + hash160Length + hash160 + OP_CODES.OP_EQUALVERIFY + OP_CODES.OP_CHECKSIG
-            var hexScriptLength = numberToHex(hexScript.length / 2, 8) // ~0x19 = ~25
-
-            this.outputScripts.push({ hexValue, hexScriptLength, hexScript })
-        })
-
         this.inputScripts = []
 
         this.inputs.forEach(input => {
 
-            var hexTxid = reverseHexLE(input.txid) // txid little endian
-            var hexTxindex = numberToHexLE(input.txindex, 32) // little-endian
+            let hexTxid = reverseHexLE(input.txid) // txid little endian
+            let hexTxindex = numberToHexLE(input.txindex, 32) // little-endian
 
-            // var hash160 = String(base58Decode(input.address)).substring(2, 42) // the 20 bytes -> 160 bits
-            var hexScript = input.scriptPubkey // hash160ToScript()
-            var hexScriptLength = numberToHex(hexScript.length / 2, 8)
+            // let hash160 = String(base58Decode(input.address)).substring(2, 42) // the 20 bytes -> 160 bits
+            let hexScript = input.scriptPubkey // hash160ToScript()
+            let hexScriptLength = numberToHex(hexScript.length / 2, 8)
 
-            var hexSequence = input.sequence ? numberToHexLE(input.sequence, 32) : "ffffffff" // 0xffffffff - 32bits
+            let hexSequence = input.sequence ? numberToHexLE(input.sequence, 32) : "ffffffff" // 0xffffffff - 32bits
 
             this.inputScripts.push({ hexTxid, hexTxindex, hexScript, hexScriptLength, hexSequence })
+        })
+
+        this.outputScripts = []
+
+        this.outputs.forEach(out => {
+            // value little-endian
+            let hexValue = numberToHexLE(out.value, 64) // 64bits
+            let hash160 = Base58.decode(out.address).substring(2, 42) // the 20 bytes -> 160 bits
+
+            // let hash160Length = (hash160.length / 2).toString(26) // 0x14 == 20
+            let hexScript = hash160ToScript(hash160) //OP_CODES.OP_DUP + OP_CODES.OP_HASH160 + hash160Length + hash160 + OP_CODES.OP_EQUALVERIFY + OP_CODES.OP_CHECKSIG
+            let hexScriptLength = numberToHex(hexScript.length / 2, 8) // ~0x19 = ~25
+
+            this.outputScripts.push({ hexValue, hexScriptLength, hexScript })
         })
 
         // signs the transaction => generates the signed script and puts it in hexScriptSig
@@ -50,9 +50,9 @@ export class P2PKH extends BTransaction {
     }
 
     public getTxid() {
-        var transactionRow = this.build()
+        let transactionRow = this.build()
 
-        var hash256 = sha256(hexToBytes(transactionRow), true)
+        let hash256 = sha256(hexToBytes(transactionRow), true)
 
         // return hash256 little-endian
         return reverseHexLE(hash256)
@@ -62,7 +62,7 @@ export class P2PKH extends BTransaction {
 
         this.inputScripts.forEach((input, index) => {
 
-            var hexTransaction: string = this.buildRow(true, index)
+            let hexTransaction: string = this.buildRow(true, index)
 
             input.hexScriptSig = this.buildSignature(hexTransaction)
         })
@@ -71,7 +71,7 @@ export class P2PKH extends BTransaction {
     private buildRow(toSign: boolean = false, inputToSign: number = 0) {
 
         // set transaction version
-        var hexTransaction: string = numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
+        let hexTransaction: string = numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
 
         // set number of imputs 
         hexTransaction += numberToHex(this.inputs.length, 8) // hexadecimal 8bits 1 = 01
@@ -128,10 +128,10 @@ export class P2PKH extends BTransaction {
     private buildSignature(hexTransaction: string) {
 
         // generate the hash250 from transaction hex
-        var hash256 = sha256(hexToBytes(hexTransaction), true)
+        let hash256 = sha256(hexToBytes(hexTransaction), true)
 
         // generate the signature from hash256 of transaction hex
-        var signature = this.pairKey.signHash(hash256)
+        let signature = this.pairKey.signHash(hash256)
 
         // append the SIGHASH = ~01
         signature += SIGHASH_ALL
@@ -139,11 +139,11 @@ export class P2PKH extends BTransaction {
         // append the length of signature + SIGHASH hexadecimal int8bits 1 = 01
         signature = numberToHex(signature.length / 2, 8) + signature
 
-        var compressedPublicKey = Base58.decode(this.pairKey.getPublicKeyCompressed())
+        let compressedPublicKey = Base58.decode(this.pairKey.getPublicKeyCompressed())
 
-        var compressedPublicKeyLength = numberToHex(compressedPublicKey.length / 2, 8) // hexadecimal int8bits 1 = 01
+        let compressedPublicKeyLength = numberToHex(compressedPublicKey.length / 2, 8) // hexadecimal int8bits 1 = 01
 
-        var scriptSigned = signature + compressedPublicKeyLength + compressedPublicKey
+        let scriptSigned = signature + compressedPublicKeyLength + compressedPublicKey
 
         return scriptSigned
     }

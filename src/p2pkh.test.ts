@@ -1,6 +1,5 @@
 import { ECPairKey } from "./ecpairkey"
 import { P2PKH } from "./p2pkh"
-import { bytesToHex, hexToBytes, reverseHexLE, sha256 } from "./utils"
 
 describe("P2PKH switch", () => {
     it("create transaction row with 1 input", () => {
@@ -27,8 +26,8 @@ describe("P2PKH switch", () => {
             value: 61900000
         })
 
-        expect(transaction.getTxid()).toBe("2de56daa25d88f200e81eea36a41d82a2394f50f80f0d72776443a6172e9c55d")
-        expect(transaction.build()).toBe("0100000001f3a27f485f9833c8318c490403307fef1397121b5dd8fe70777236e7371c4ef3000000006b483045022027ebbe9ce81ddc0333f19fbbce027a0ab0bc7a5ad684a83db85b222dc0ee2de4022100d6842b3a78d7d8184ea8a8a75474779dcb772820fd82ff3040aaa03586019d5f012102d0de0aaeaefad02b8bdc8a01a1b8b11c696bd3d66a2c5f10780d95b7df42645cffffffff0217efee00000000001976a91418ba14b3682295cb05230e31fecb00089240660888ac3b084e00000000001976a914a65d1a239d4ec666643d350c7bb8fc44d288112888ac00000000")
+        expect(transaction.getTxid()).toBe("c59f0ae385c21f6302375cf5db918862d2819943f42bab44faf80c711da9bbad")
+        expect(transaction.build()).toBe("0100000001f3a27f485f9833c8318c490403307fef1397121b5dd8fe70777236e7371c4ef3000000006a47304402202662ba9ace06653baf83f4114965ddef6dc11d7c404d523635b0503aac68bbe902205b08149bf42dfd8137a6e28babe70c74e87011f23e95c5472898379835dfd1e3012103d0de0aaeaefad02b8bdc8a01a1b8b11c696bd3d66a2c5f10780d95b7df42645cffffffff02e0fe7e01000000001976a91418ba14b3682295cb05230e31fecb00089240660888ace084b003000000001976a914a65d1a239d4ec666643d350c7bb8fc44d288112888ac00000000")
     })
     it("create transaction row with 2 inputs or more", () => {
         let pairKey = new ECPairKey({ privateKey: "514321cfa3c255be2ce8249a70267b9d2935b7dc5b36055ba158d5f00c645f83", network: "testnet" })

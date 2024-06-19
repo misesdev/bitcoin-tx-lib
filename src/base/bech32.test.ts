@@ -12,11 +12,11 @@ describe("bech 32", () => {
     })
     it("convert public key to address testnet", () => {
 
-        let bech = new Bech32({ publicKey: "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", network: "testnet" })
+        let bech = new Bech32({ publicKey: "0333b81ed541c4beee28783890c013f1e5dd4eb38f60b78a4d30b5cad26996217f", network: "testnet" })
 
         let address = bech.getAddress()
 
-        expect(address).toBe("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
+        expect(address).toBe("tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj")
     })
     it("convert ripemd in bech32 bytes", () => {
 
@@ -53,7 +53,7 @@ describe("bech 32", () => {
         let bech = new Bech32({ publicKey: "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798" })
 
         let script = bech.getScriptPubkey(bech.getAddress())
-
+      
         expect(script).toBe("751e76e8199196d454941c45d1b3a323f1433bd6")
     })
 })

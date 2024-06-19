@@ -144,7 +144,7 @@ export class Bech32 {
         if (pos < 1 || pos + 7 > bechString.length || bechString.length > 90) {
             return null
         }
-        var hrp = bechString.substring(0, pos)
+        // var hrp = bechString.substring(0, pos)
         var data = []
         for (p = pos + 1; p < bechString.length; ++p) {
             var d = this.chars.indexOf(bechString.charAt(p))
