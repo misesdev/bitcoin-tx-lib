@@ -11,11 +11,19 @@ export type Bech32Options = {
     publicKey: string
 }
 
-export interface InputTransaction {
+export interface InputLegacy {
+    txid: string,
+    txindex: number,
+    scriptPubkey: string,
+    sequence?: number
+}
+
+export interface InputSegwit {
     txid: string,
     txindex: number,
     scriptPubkey: string,
     sequence?: number,
+    value?: number
 }
 
 export interface InputScript {
@@ -24,7 +32,8 @@ export interface InputScript {
     hexScript: string,
     hexScriptLength: string,
     hexSequence: string,
-    hexScriptSig?: string
+    hexScriptSig?: string,
+    hexValue?: string 
 }
 
 export interface OutputTransaction {
@@ -38,12 +47,12 @@ export interface OutPutScript {
     hexScript: string
 }
 
-export interface Transaction {
-    version: number,
-    inputs: InputTransaction[],
-    outputs: OutputTransaction[],
-    locktime: number
-}
+// export interface Transaction {
+//     version: number,
+//     inputs: InputTransaction[],
+//     outputs: OutputTransaction[],
+//     locktime: number
+// }
 
 export type Hex = Uint8Array;
 
