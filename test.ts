@@ -1,8 +1,15 @@
 
+import { Base58 } from "./src/base/base58";
+import { Bech32 } from "./src/base/bech32";
 import { ECPairKey } from "./src/ecpairkey";
 import { P2WPKH } from "./src/p2wpkh";
 
 let pairKey = ECPairKey.fromWif("92n4i3QMN55FTaxZh7JUz3QLg5HkawCDjh4AEcBwpvK61YX893g", { network: "testnet" })
+
+let bech32 = new Bech32({
+    publicKey: Base58.decode(pairKey.getPublicKeyCompressed()),
+    network: pairKey.network
+})
 
 let tx = new P2WPKH(pairKey)
 
@@ -34,6 +41,8 @@ tx.addOutput({ // change
     value: 2980,
 })
 
-console.log("address:", pairKey.getAddress(true))
-console.log("txid:", tx.getTxid())
-console.log("tx row:", tx.build())
+// console.log("address:", pairKey.getAddress(true))
+// console.log("txid:", tx.getTxid())
+// console.log("tx row:", tx.build())
+
+console.log(bech32.getScriptPubkey("tb1qt9xzu0df95vsfal8eptzyruv4e00k4ty6d8zhh"))

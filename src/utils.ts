@@ -111,12 +111,11 @@ export function reverseHexLE(hex: string, isBytes: boolean = true) {
     if (isBytes && hex.length % 2 !== 0)
         throw new Error("Invalid hex value!")
 
-    let hexLE = '';
+    let hexLE = ''
 
-    for (let i = hex.length; i > 0; i -= 2) {
-        hexLE += hex[i - 2] + hex[i - 1];
-    }
+    for (let i = hex.length; i > 0; i -= 2) 
+        hexLE += hex[i - 2] + hex[i - 1]
 
     // return hexadecimal bytes in little-endian
-    return hexLE;
+    return hexLE
 }

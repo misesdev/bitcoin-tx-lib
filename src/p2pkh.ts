@@ -120,44 +120,44 @@ export class P2PKH extends BTransaction {
 
     private buildRow() {
 
-        // set transaction version
+        // includes transaction version
         let hexTransaction: string = numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
 
-        // set number of imputs 
+        // includes number of imputs 
         hexTransaction += numberToHex(this.inputs.length, 8) // hexadecimal 8bits 1 = 01
 
         this.inputScripts.forEach(input => {
-            // set txid in little-endian
+            // includes txid in little-endian
             hexTransaction += input.hexTxid
 
-            // set txindex hexadecimal 32bits little-endian
+            // includes txindex hexadecimal 32bits little-endian
             hexTransaction += input.hexTxindex
 
-            // set script length hexadecimal int8 1 = 01
+            // includes script length hexadecimal int8 1 = 01
             hexTransaction += numberToHex((input.hexScriptSig ?? "ff").length / 2, 8)
 
-            // set length hexadecimal int8bits + script of last utxo
+            // includes length hexadecimal int8bits + script of last utxo
             hexTransaction += input.hexScriptSig
 
-            // set sequence utxo
+            // includes sequence utxo
             hexTransaction += input.hexSequence
         })
 
-        // set number of outputs hexadecimal int8bits
+        // includes number of outputs hexadecimal int8bits
         hexTransaction += numberToHex(this.outputs.length, 8) // hexadecimal 8bits 1 = 01
 
         this.outputScripts.forEach(output => {
-            // set amount hexadecimal little-endian int64bits 1 = 0100000000000000
+            // includes amount hexadecimal little-endian int64bits 1 = 0100000000000000
             hexTransaction += output.hexValue
 
-            // set script length hexadecimal int8 1 = 01
+            // includes script length hexadecimal int8 1 = 01
             hexTransaction += output.hexScriptLength
 
-            // set the script output
+            // includes the script output
             hexTransaction += output.hexScript
         })
 
-        // set locktime hexadecimal int32bits little-endian 1 = 01000000
+        // includes locktime hexadecimal int32bits little-endian 1 = 01000000
         hexTransaction += numberToHexLE(this.locktime, 32)
 
         return hexTransaction

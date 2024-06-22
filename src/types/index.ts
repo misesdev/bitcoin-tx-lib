@@ -21,8 +21,9 @@ export interface InputLegacy {
 export interface InputSegwit {
     txid: string,
     txindex: number,
-    scriptPubkey: string,
     sequence?: number,
+    scriptPubkey: string,
+    address?: string,
     value?: number
 }
 
@@ -30,6 +31,7 @@ export interface InputScript {
     hexTxid: string,
     hexTxindex: string,
     hexScript: string,
+    hexScriptToSig?: string,
     hexScriptLength: string,
     hexSequence: string,
     hexScriptSig?: string,
