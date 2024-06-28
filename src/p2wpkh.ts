@@ -128,7 +128,7 @@ export class P2WPKH extends BTransaction {
     private buildRow() {
 
         // includes the transaction version
-        let hexTransaction = numberToHexLE(this.version, 8)
+        let hexTransaction: string = numberToHexLE(this.version, 32)
 
         // includes the segwit marker 0x00 and flag 0x01 which allow nodes to identify this as a SegWit transaction
         hexTransaction += "0001"

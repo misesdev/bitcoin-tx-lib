@@ -46,3 +46,5 @@ tx.addOutput({ // change
 // console.log("tx row:", tx.build())
 
 console.log(bech32.getScriptPubkey("tb1qt9xzu0df95vsfal8eptzyruv4e00k4ty6d8zhh"))
+ 
+
