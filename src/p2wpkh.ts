@@ -1,13 +1,13 @@
 import { Base58 } from "./base/base58";
 import { Bech32 } from "./base/bech32";
-import { BTransaction } from "./base/txbase";
+import { BaseTransaction } from "./base/txbase";
 import { SIGHASH_ALL } from "./constants/generics";
 import { OP_CODES } from "./constants/opcodes";
 import { ECPairKey } from "./ecpairkey";
 import { InputScript, InputSegwit, OutPutScript, OutputTransaction } from "./types";
 import { hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseHexLE, sha256 } from "./utils";
 
-export class P2WPKH extends BTransaction {
+export class P2WPKH extends BaseTransaction {
 
     public inputs: InputSegwit[] = []
     public outputs: OutputTransaction[] = []
@@ -20,6 +20,11 @@ export class P2WPKH extends BTransaction {
     }
 
     public addInput(input: InputSegwit) {
+        if(!input.txid)
+          throw new Error("txid is required to add a valid input")
+        else if (!input.value)
+          throw new Error("value is required to add a valid input")
+        
         this.inputs.push(input)
     }
 
@@ -38,7 +43,7 @@ export class P2WPKH extends BTransaction {
 
         this.inputs.forEach(input => {
 
-            let hexTxid = reverseHexLE(input.txid) // txid little endian
+            let hexTxid = input.txid // txid not little-endian
             let hexTxindex = numberToHexLE(input.txindex, 32) // little-endian
             let hexValue = numberToHexLE(input.value, 64) // value little-endian 64bits
 
@@ -46,9 +51,10 @@ export class P2WPKH extends BTransaction {
             let hexScriptToSig = hash160ToScript(hash160)
             let hexScriptToSigLength = numberToHex(hexScriptToSig.length, 8)
             hexScriptToSig = hexScriptToSigLength + hexScriptToSig
+                  
+            let hexScript = "" //numberToHex(input?.scriptPubkey?.length / 2, 8) + input.scriptPubkey 
 
-            let hexScript = numberToHex(input.scriptPubkey.length / 2, 8) + input.scriptPubkey 
-            let hexScriptLength = numberToHex(hexScript.length / 2, 8)
+            let hexScriptLength = "" // numberToHex(hexScript.length / 2, 8)
 
             let hexSequence = input.sequence ? numberToHexLE(input.sequence, 32) : "ffffffff" // 0xffffffff - 32bits
 
@@ -141,15 +147,15 @@ export class P2WPKH extends BTransaction {
             hexTransaction += reverseHexLE(input.hexTxid)
             // includes the tx index
             hexTransaction += input.hexTxindex
-
-            if (input.hexScript.substring(2, 6) == "76a9")
+        
+            //if (input.hexScript.substring(2, 6) == "76a9")
                 // includes the scriptSig which in the segwit case is 0x00 as the scriptsig will be in the witness field
                 hexTransaction += "00"
 
-            if (input.hexScript.substring(2, 6) !== "76a9") {
-                hexTransaction += input.hexScriptLength
-                hexTransaction += input.hexScript
-            }
+            //if (input.hexScript.substring(2, 6) !== "76a9") {
+            //    hexTransaction += input.hexScriptLength
+            //    hexTransaction += input.hexScript
+            //}
             // includes the sequence 
             hexTransaction += input.hexSequence
         })
@@ -170,7 +176,7 @@ export class P2WPKH extends BTransaction {
 
         // the witness field
         this.inputScripts.forEach(input => {
-            // quantity of items
+            // quantity of items 02 sign + public key
             hexTransaction += "02"
             // signature length + signature and publickey length + publickey
             hexTransaction += input.hexScriptSig

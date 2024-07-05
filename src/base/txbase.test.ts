@@ -1,10 +1,10 @@
 import { ECPairKey } from "../ecpairkey"
-import { BTransaction } from "./txbase"
+import { BaseTransaction } from "./txbase"
 
 describe("transaction base class", () => {
     it("add input", () => {
         let pairKey = new ECPairKey()
-        let transaction = new BTransaction(pairKey)
+        let transaction = new BaseTransaction(pairKey)
 
         // expect(transaction.inputs.length).toBe(0)
 
@@ -19,7 +19,7 @@ describe("transaction base class", () => {
 
     it("add output", () => {
         let pairKey = new ECPairKey()
-        let transaction = new BTransaction(pairKey)
+        let transaction = new BaseTransaction(pairKey)
 
         // expect(transaction.outputs.length).toBe(0)
 

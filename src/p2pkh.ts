@@ -1,10 +1,10 @@
 import { Base58 } from "./base/base58";
-import { BTransaction } from "./base/txbase";
+import { BaseTransaction } from "./base/txbase";
 import { ECPairKey } from "./ecpairkey";
 import { InputScript, InputLegacy, OutPutScript, OutputTransaction } from "./types";
 import { hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseHexLE, sha256 } from "./utils";
 
-export class P2PKH extends BTransaction {
+export class P2PKH extends BaseTransaction {
 
     public inputs: InputLegacy[] = []
     public outputs: OutputTransaction[] = []

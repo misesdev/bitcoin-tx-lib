@@ -1,7 +1,7 @@
 const Ecc = require('elliptic').ec
 import { Base58 } from "./base/base58";
 import { Bech32 } from "./base/bech32";
-import { BNetwork, ECOptions, Hex } from "./types"
+import { BNetwork, ECOptions } from "./types"
 import { bytesToHex, checksum, hexToBytes, ripemd160, sha256 } from "./utils";
 
 export class ECPairKey {

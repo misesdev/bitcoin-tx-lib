@@ -24,19 +24,27 @@ transaction.addInput({ // 1000 sats
 transaction.addInput({ // 4990 sats
     address: "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj",
     txid: "eb7a011f410205363b01d401742e0f397ffd692e966ffdd7695a7f3346d1b0e8",
-    scriptPubkey: "0014b23d060e82d6a72e5f2b1b81cb88f26b2d6093af",
+    //scriptPubkey: "0014b23d060e82d6a72e5f2b1b81cb88f26b2d6093af",
     value: 4990,
+    txindex: 0
+})
+
+transaction.addInput({
+    address: "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj",
+    txid: "cfb6f7dbc90f3ebf94b4d3dda381e5900dc968e8d5419c32906c639ed7b15eb0",
+    //scriptPubkey: "0014a8439c50793b033df810de257b313144a8f7edc9",
+    value: 4710,
     txindex: 0
 })
 
 transaction.addOutput({ // receiver
     address: "tb1qlj64u6fqutr0xue85kl55fx0gt4m4urun25p7q",
-    value: 6000,
+    value: 1000,
 })
 
 transaction.addOutput({ // change 
     address: pairKey.getAddress(true), // bech32
-    value: 2980,
+    value: 1000,
 })
 
 // legacy d1a92ad68a031c5324981aa920152bd16975686905db41e3fc9d51c7ff4a20ed

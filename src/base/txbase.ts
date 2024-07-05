@@ -3,7 +3,7 @@ import { ECPairKey } from "../ecpairkey"
 import { hexToBytes, numberToHex, sha256 } from "../utils"
 import { Base58 } from "./base58"
 
-export class BTransaction {
+export class BaseTransaction {
 
     public version: number = 1
     public locktime: number = 0
