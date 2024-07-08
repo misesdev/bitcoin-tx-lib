@@ -1,7 +1,6 @@
 import { Base58 } from "./base/base58";
 import { Bech32 } from "./base/bech32";
 import { BaseTransaction } from "./base/txbase";
-import { SIGHASH_ALL } from "./constants/generics";
 import { OP_CODES } from "./constants/opcodes";
 import { ECPairKey } from "./ecpairkey";
 import { InputScript, InputSegwit, OutPutScript, OutputTransaction } from "./types";

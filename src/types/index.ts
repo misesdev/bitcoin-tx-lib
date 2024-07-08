@@ -1,12 +1,6 @@
 
 type Bytes = Uint8Array;
 
-interface InTransaction {
-    txid: string,
-    txindex: number,
-    scriptPubkey?: string
-}
-
 export type BNetwork = "testnet" | "mainnet"
 
 export type BechEncoding = "bech32" | "bech32m"
@@ -15,6 +9,12 @@ export type Bech32Options = {
     network?: BNetwork,
     version?: number,
     publicKey: string
+}
+
+interface InTransaction {
+    txid: string,
+    txindex: number,
+    scriptPubkey?: string
 }
 
 export interface InputLegacy extends InTransaction {
@@ -35,7 +35,8 @@ export interface InputScript {
     hexScriptLength: string,
     hexSequence: string,
     hexScriptSig?: string,
-    hexValue?: string 
+    hexValue?: string,
+    isSegwit?: boolean
 }
 
 export interface InputTransaction extends InTransaction {
@@ -53,13 +54,6 @@ export interface OutPutScript {
     hexScriptLength: string,
     hexScript: string
 }
-
-// export interface Transaction {
-//     version: number,
-//     inputs: InputTransaction[],
-//     outputs: OutputTransaction[],
-//     locktime: number
-// }
 
 export interface ECOptions {
     network?: BNetwork,
