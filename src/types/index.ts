@@ -28,14 +28,14 @@ export interface InputSegwit extends InTransaction {
 }
 
 export interface InputScript {
-    hexTxid: string,
-    hexTxindex: string,
-    hexScript: string,
-    hexScriptToSig?: string,
-    hexScriptLength: string,
-    hexSequence: string,
-    hexScriptSig?: string,
-    hexValue?: string,
+    hexTxid: Uint8Array,
+    hexTxindex: Uint8Array,
+    hexScript: Uint8Array,
+    hexScriptToSig?: Uint8Array,
+    hexScriptLength: Uint8Array,
+    hexSequence: Uint8Array,
+    hexScriptSig?: Uint8Array,
+    hexValue?: Uint8Array,
     isSegwit?: boolean
 }
 
@@ -50,9 +50,9 @@ export interface OutputTransaction {
 }
 
 export interface OutPutScript {
-    hexValue: string,
-    hexScriptLength: string,
-    hexScript: string
+    hexValue: Uint8Array,
+    hexScriptLength: Uint8Array,
+    hexScript: Uint8Array
 }
 
 export interface ECOptions {

@@ -23,24 +23,20 @@ export class Bech32 {
     }
 
     // convert a ripemd160 hexadecimal in a bech32 hexadecimal 32 bytes
-    public convert(ripemd160: string): number[] {
-        let hexBytes = []
-        // separates 8-bit bytes hexadecimal into an array
-        for (let i = 0; i < ripemd160.length; i += 2)
-            hexBytes.push(ripemd160.slice(i, i + 2))
-
+    public convert(ripemd160: Uint8Array): number[] {
+        let binary = ""
         // convert the bytes in int binary 8 bits string binary
-        let int8String = hexBytes.map(hex => {
-            let bits = parseInt(hex, 16).toString(2)
-            while (bits.length < 8)
+        ripemd160.forEach(num => {
+            let bits = num.toString(2)
+            while(bits.length < 8)
                 bits = "0" + bits
-            return bits
-        }).join("")
+            binary += bits
+        })
 
         let int5Array: number[] = [this.version]
         // breaks the string into 5-bit ints in an array
-        for (let i = 0; i < int8String.length; i += 5)
-            int5Array.push(parseInt(int8String.slice(i, i + 5), 2))
+        for (let i = 0; i < binary.length; i += 5)
+            int5Array.push(parseInt(binary.slice(i, i + 5), 2))
 
         // convert int5 into 1-byte hexadecimal and return the string of concatenating bytes
         return int5Array;
@@ -50,7 +46,7 @@ export class Bech32 {
 
         let sha2 = sha256(hexToBytes(this.publicKey))
 
-        let ripemd = ripemd160(hexToBytes(sha2))
+        let ripemd = ripemd160(sha2)
 
         let hex = this.convert(ripemd)
 

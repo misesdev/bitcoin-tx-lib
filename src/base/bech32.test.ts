@@ -21,7 +21,7 @@ describe("bech 32", () => {
     it("convert ripemd in bech32 bytes", () => {
 
         let bech32 = new Bech32({ publicKey: "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798" })
-        let bech = bech32.convert("751e76e8199196d454941c45d1b3a323f1433bd6")
+        let bech = bech32.convert(hexToBytes("751e76e8199196d454941c45d1b3a323f1433bd6"))
 
         //0x000e140f070d1a001912060b0d081504140311021d030c1d03040f1814060e1e16
         expect(bech[0]).toBe(0x00) 

@@ -1,4 +1,5 @@
 import { ECPairKey } from "./ecpairkey";
+import { bytesToHex } from "./utils";
 
 describe("ECPairKey", () => {
     it("create keypair", () => {
@@ -38,9 +39,9 @@ describe("ECPairKey", () => {
 
         let signature = pairKey.signHash("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba")
 
-        expect(signature).toBe("304402205598d37448064924b0e4b0d43f74625f1c87da0c7e56266b48081ce0fa69ec850220067581bbc97b9f7dd9d5b67fd2558e7c516c2b71c5f0f472b3e290a086a5696d")
+        expect(bytesToHex(signature)).toBe("304402205598d37448064924b0e4b0d43f74625f1c87da0c7e56266b48081ce0fa69ec850220067581bbc97b9f7dd9d5b67fd2558e7c516c2b71c5f0f472b3e290a086a5696d")
         
-        let isValid = pairKey.verifySignature("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba", signature)
+        let isValid = pairKey.verifySignature("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba", bytesToHex(signature))
 
         expect(isValid).toBe(true)
     })
@@ -64,9 +65,12 @@ describe("ECPairKey", () => {
     it("get bitcoin address", () => {
         const pairKey = ECPairKey.fromWif("5KCyEgVQ93iZoJ81tYrknfpry9LopRhJgBTdMFsapamox69wdar")//new ECPairKey()
 
-        const address = pairKey.getAddress()
+        let address = pairKey.getAddress()
 
         expect(address).toBeDefined()
         expect(address).toBe("1Mr6dG4BtavXCtaKPaxQpdXHWyCVvMbxtY")
+
+        address = pairKey.getAddress(true) // bech32
+        expect(address).toBe("bc1qv3p9y96wr7xn2dq80vz99dxtf7ed4zvcpdemk6")
     })
 })

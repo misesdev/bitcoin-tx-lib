@@ -31,6 +31,12 @@ export class Transaction extends BaseTransaction {
     return hexTransaction
   }
 
+  public buildRow(): string {
+    let hexTransaction = ""
+
+    return hexTransaction
+  }
+
   public buildToSign(): string {
     let hexTransaction = numberToHexLE(this.version, 32)
 

@@ -2,19 +2,19 @@ const Ecc = require('elliptic').ec
 import { Base58 } from "./base/base58";
 import { Bech32 } from "./base/bech32";
 import { BNetwork, ECOptions } from "./types"
-import { bytesToHex, checksum, hexToBytes, ripemd160, sha256 } from "./utils";
+import { bytesToHex, checksum, hexToBytes, mergeUint8Arrays, ripemd160, sha256 } from "./utils";
 
 export class ECPairKey {
 
     public privateKey: string;
     public network: BNetwork = "mainnet"
     public cipherCurve = "secp256k1"
-    static wifPrefixes = ["80", "ef"]
+    static wifPrefixes = new Uint8Array([0x80, 0xef])
 
     private elliptic = new Ecc(this.cipherCurve ?? "secp256k1")
 
     constructor(options?: ECOptions) {
-        this.network = options?.network ? options?.network : "mainnet"
+        this.network = options?.network ?? "mainnet"
         this.privateKey = options?.privateKey ?? this.elliptic.genKeyPair().getPrivate("hex")
     }
 
@@ -42,13 +42,13 @@ export class ECPairKey {
         return Base58.encode(publicKeyCompressed)
     }
 
-    public signHash(messageHash: string): string {
+    public signHash(messageHash: string): Uint8Array {
 
         const keyPair = this.elliptic.keyFromPrivate(this.privateKey)
 
         const signature = keyPair.sign(messageHash)
 
-        return bytesToHex(signature.toDER())
+        return signature.toDER()
     }
 
     public verifySignature(messageHash: string, derSignature: string): boolean {
@@ -60,26 +60,33 @@ export class ECPairKey {
 
     public getWif(): string {
 
-        // bytes prefix 0x80 and 0xef (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
-        let wifPrefix = this.network == "mainnet" ? "80" : "ef"
+        let priv = hexToBytes(this.privateKey)
 
-        let wif: string = wifPrefix + this.privateKey
+        let prefix = this.network === "mainnet" ? new Uint8Array([0x80]) : new Uint8Array([0xef])
+       
+        let privateWif = mergeUint8Arrays(prefix, priv)
 
-        // first 4 bytes 
-        wif += checksum(hexToBytes(wif))
+        let check = checksum(privateWif)
 
-        return Base58.encode(wif)
+        let wif = mergeUint8Arrays(privateWif, check)
+
+        return Base58.encode(bytesToHex(wif))
     }
 
     public getPublicWif(): string {
-        let prefix = this.network == "mainnet" ? "80" : "ef"
+
+        let priv = hexToBytes(this.privateKey)
+        
+        let prefix = this.network == "mainnet" ? new Uint8Array([0x80]) : new Uint8Array([0xef])
 
         // the 0x01 byte added at the end indicates that it is a compressed public key (doc: https://en.bitcoin.it/wiki/Wallet_import_format)
-        let publicWif = prefix + this.privateKey + "01"
+        let publicWif = mergeUint8Arrays(prefix, priv, new Uint8Array([0x01]))
 
-        publicWif += checksum(hexToBytes(publicWif))
+        let check = checksum(publicWif)
 
-        return Base58.encode(publicWif)
+        let wif = mergeUint8Arrays(publicWif, check)
+
+        return Base58.encode(bytesToHex(wif))
     }
 
     public getAddress(bech32: boolean = false): string {
@@ -95,20 +102,26 @@ export class ECPairKey {
             address = bech32.getAddress()
         } else {
 
-            let publicKey = this.getPublicKey()
+            let publicKey = hexToBytes(this.getPublicKey()) 
+            
+            // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
+            let prefix = new Uint8Array([this.network == "mainnet"? 0x00 : 0x6f])
+            
             // the last param to ripemd160 -> true -> ripemd160(sha256(publicKey))
-            let scriptRipemd160 = ripemd160(hexToBytes(publicKey), true)
+            let pubScript = ripemd160(publicKey, true)
 
             // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
-            let prefixAddress = this.network == "mainnet" ? "00" : "6f";
+            //let prefixAddress = this.network == "mainnet" ? "00" : "6f";
 
-            let script = prefixAddress + scriptRipemd160
+            let script = mergeUint8Arrays(prefix, pubScript)//prefixAddress + scriptRipemd160
             // the last param to sha256 -> true -> sha256(sha256(script)).substring(0, 8) - is a checksum(first 4 bytes)
-            let check = checksum(hexToBytes(script))
+            let checkHash = checksum(script)
 
-            address = script + check
+            let result = mergeUint8Arrays(script, checkHash)
 
-            address = Base58.encode(address)
+            //address = script + check
+
+            address = Base58.encode(bytesToHex(result))
         } 
         return address
     }
@@ -125,18 +138,22 @@ export class ECPairKey {
 
     static verifyWif(wifHex: string): boolean {
 
-        let prefix = wifHex.substring(0, 2)
+        let bytes = hexToBytes(wifHex)
+        let prefix = bytes[0] //wifHex.substring(0, 2)
 
         // In hex [0x80]
-        if (!this.wifPrefixes.includes(prefix.toLowerCase())) return false
+        if (!this.wifPrefixes.includes(prefix)) return false
 
-        let checksumBytes = wifHex.substring(wifHex.length - 8)
-        let checksumHash = wifHex.substring(0, wifHex.length - 8)
+        let checksumBytes = bytes.slice(bytes.length - 4, bytes.length) //wifHex.substring(wifHex.length - 8)
+        
+        let checksumHash = bytes.slice(0, bytes.length - 4)//wifHex.substring(0, wifHex.length - 8)
 
-        checksumHash = checksum(hexToBytes(checksumHash))
+        checksumHash = checksum(checksumHash)
 
-        if (checksumHash !== checksumBytes) return false;
+        if (checksumHash.toString() !== checksumBytes.toString()) return false;
 
         return true
     }
 }
+
+

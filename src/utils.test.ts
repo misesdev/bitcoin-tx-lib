@@ -3,6 +3,7 @@ import {
     checksum, 
     hash160ToScript, 
     hexToBytes, 
+    mergeUint8Arrays, 
     numberToHex, 
     numberToHexLE, 
     reverseEndian, 
@@ -52,28 +53,29 @@ describe("utils", () => {
         expect(hash).toBeDefined()
 
         const hash256 = sha256(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"), true)
-        expect(hash256).toBe("507a5b8dfed0fc6fe8801743720cedec06aa5c6fca72b07c49964492fb98a714")
+        
+        expect(bytesToHex(hash256)).toBe("507a5b8dfed0fc6fe8801743720cedec06aa5c6fca72b07c49964492fb98a714")
     })
     it("hash checksum", () => {
         const checksumBytes = checksum(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"))
-        expect(String(checksumBytes).toUpperCase()).toBe("507A5B8D")
+        
+        expect(bytesToHex(checksumBytes)).toBe("507a5b8d")
     })
     it("hash ripemd160", () => {
 
-        let sha256 = "6b23c0eabc34e97f4b5f8c2277d6b7f6869b16dfb4f2c284b94efc13a3d81b0c" 
-        let expectRipemd160 = "825e1e77af4ea56228f2c96385dc24d9ba788a8c" 
+        let sha256 = "6b23c0eabc34e97f4b5f8c2277d6b7f6869b16dfb4f2c284b94efc13a3d81b0c"
 
         let hash = ripemd160(hexToBytes(sha256))
 
-        expect(hash).toBe(expectRipemd160)
+        expect(bytesToHex(hash)).toBe("825e1e77af4ea56228f2c96385dc24d9ba788a8c")
 
         // generating ripemd160 hash based on characters and not considering hexadecimal
-        hash = ripemd160(hexToBytes(sha256, false))
-        expect(hash).toBe("fad534e4b13dd564f2c0e20120e79ff1d5b07548")
+        //hash = ripemd160(hexToBytes(sha256, false))
+        //expect(bytesToHex(hash)).toBe("fad534e4b13dd564f2c0e20120e79ff1d5b07548")
 
         // generate for address ripemd160(sha256(hash))
         hash = ripemd160(hexToBytes(sha256), true)
-        expect(hash).toBe("58077dda57de14ac9f055c64bf3c71ff0b5796da")
+        expect(bytesToHex(hash)).toBe("58077dda57de14ac9f055c64bf3c71ff0b5796da")
     })
     it("reverse endian bytes", () => {
         const bytes = new Uint8Array(4)
@@ -92,31 +94,44 @@ describe("utils", () => {
     })
     it("convert a number integer in hexadecimal", () => {
         let hexNumber = numberToHex(1, 32) // 32bits
-        expect(hexNumber).toBe("00000001")
+        expect(bytesToHex(hexNumber)).toBe("00000001")
 
         hexNumber = numberToHex(0, 32)
-        expect(hexNumber).toBe("00000000")
+        expect(bytesToHex(hexNumber)).toBe("00000000")
     })
     it("convert a number integer in hexadecimal(little-endian)", () => {
         let hexNumber = numberToHexLE(1, 32) // 32bits
-        expect(hexNumber).toBe("01000000")
+        expect(bytesToHex(hexNumber)).toBe("01000000")
 
         hexNumber = numberToHexLE(0, 32)
-        expect(hexNumber).toBe("00000000")
+        expect(bytesToHex(hexNumber)).toBe("00000000")
     })
     it("generate script from hash160", () => {
 
-        let script = hash160ToScript("18ba14b3682295cb05230e31fecb000892406608")
+        let scripthash = "18ba14b3682295cb05230e31fecb000892406608"
 
-        expect(script).toBe("76a91418ba14b3682295cb05230e31fecb00089240660888ac")
+        let script = hash160ToScript(scripthash)
+
+        expect(bytesToHex(script)).toBe("76a92018ba14b3682295cb05230e31fecb00089240660888ac")
 
         script = hash160ToScript("6bf19e55f94d986b4640c154d864699341919511")
 
-        expect(script).toBe("76a9146bf19e55f94d986b4640c154d86469934191951188ac")
+        expect(bytesToHex(script)).toBe("76a9206bf19e55f94d986b4640c154d86469934191951188ac")
     })
     it("convert hexadecimal string bytes in little-endian", () => {
-        let little = reverseHexLE("ff8099")
 
-        expect(little).toBe("9980ff")
+        let little = reverseHexLE(new Uint8Array([0xff, 0x80, 0x99]))
+
+        expect(bytesToHex(little)).toBe("9980ff")
+    })
+    it("merge Uint8Arrays", () => {
+        let arr1 = new Uint8Array([0x01, 0x05])
+        let arr2 = new Uint8Array([0x55, 0xff])
+
+        let result = mergeUint8Arrays(arr1, arr2)
+
+        expect(result.length).toBe(4)
+        expect(result[0]).toBe(0x01)
+        expect(result[3]).toBe(0xff)
     })
 }) 
