@@ -39,9 +39,9 @@ describe("ECPairKey", () => {
 
         let signature = pairKey.signHash("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba")
 
-        expect(bytesToHex(signature)).toBe("304402205598d37448064924b0e4b0d43f74625f1c87da0c7e56266b48081ce0fa69ec850220067581bbc97b9f7dd9d5b67fd2558e7c516c2b71c5f0f472b3e290a086a5696d")
+        expect(signature).toBe("304402205598d37448064924b0e4b0d43f74625f1c87da0c7e56266b48081ce0fa69ec850220067581bbc97b9f7dd9d5b67fd2558e7c516c2b71c5f0f472b3e290a086a5696d")
         
-        let isValid = pairKey.verifySignature("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba", bytesToHex(signature))
+        let isValid = pairKey.verifySignature("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba", signature)
 
         expect(isValid).toBe(true)
     })

@@ -1,7 +1,9 @@
 import { SIGHASH_ALL } from "../constants/generics"
 import { ECPairKey } from "../ecpairkey"
-import { hexToBytes, numberToHex, sha256 } from "../utils"
+import { bytesToHex, hexToBytes, mergeUint8Arrays, numberToHex, sha256 } from "../utils"
 import { Base58 } from "./base58"
+
+type Hex = string | Uint8Array
 
 export class BaseTransaction {
 
@@ -13,10 +15,15 @@ export class BaseTransaction {
         this.pairKey = pairKey
     }
 
-    protected buildSignature(hexTransaction: string) {
+    protected buildSignature(hexTransaction: Hex): Hex {
+
+        let data = hexTransaction
+
+        if(typeof(hexTransaction) !== "string")
+            data = bytesToHex(hexTransaction)
 
         // generate the hash250 from transaction hex
-        let hash256 = sha256(hexToBytes(hexTransaction), true)
+        let hash256 = sha256(data, true)
 
         // generate the signature from hash256 of transaction hex
         let signature = this.pairKey.signHash(hash256)
@@ -25,14 +32,19 @@ export class BaseTransaction {
         signature += SIGHASH_ALL
 
         // append the length of signature + SIGHASH hexadecimal int8bits 1 = 01
-        signature = numberToHex(signature.length / 2, 8) + signature
+        signature = String(numberToHex(signature.length / 2, 8, "string")) + signature
 
         let compressedPublicKey = Base58.decode(this.pairKey.getPublicKeyCompressed())
 
-        let compressedPublicKeyLength = numberToHex(compressedPublicKey.length / 2, 8) // hexadecimal int8bits 1 = 01
+        let compressedPublicKeyLength = String(numberToHex(compressedPublicKey.length / 2, 8, "string")) // hexadecimal int8bits 1 = 01
 
         let scriptSigned = signature + compressedPublicKeyLength + compressedPublicKey
 
+        if(typeof(hexTransaction) === "object")
+            return hexToBytes(scriptSigned)
+    
         return scriptSigned
     }
 }
+
+

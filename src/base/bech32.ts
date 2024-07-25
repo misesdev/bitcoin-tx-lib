@@ -1,4 +1,4 @@
-import { BNetwork, Bech32Options, BechEncoding } from "../types"
+import { BNetwork, Bech32Options, BechEncoding, Hex } from "../types"
 import { bytesToHex, hexToBytes, ripemd160, sha256 } from "../utils"
 
 export class Bech32 {
@@ -23,10 +23,11 @@ export class Bech32 {
     }
 
     // convert a ripemd160 hexadecimal in a bech32 hexadecimal 32 bytes
-    public convert(ripemd160: Uint8Array): number[] {
+    public convert(ripemd160: Hex): number[] {
         let binary = ""
+        let hexadecimal = typeof(ripemd160) == "string" ? hexToBytes(ripemd160) : ripemd160
         // convert the bytes in int binary 8 bits string binary
-        ripemd160.forEach(num => {
+        hexadecimal.forEach(num => {
             let bits = num.toString(2)
             while(bits.length < 8)
                 bits = "0" + bits
@@ -44,7 +45,7 @@ export class Bech32 {
 
     public getAddress(): string {
 
-        let sha2 = sha256(hexToBytes(this.publicKey))
+        let sha2 = sha256(this.publicKey)
 
         let ripemd = ripemd160(sha2)
 

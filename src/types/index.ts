@@ -1,6 +1,8 @@
 
 type Bytes = Uint8Array;
 
+export type Hex = Uint8Array | string
+
 export type BNetwork = "testnet" | "mainnet"
 
 export type BechEncoding = "bech32" | "bech32m"
@@ -28,14 +30,14 @@ export interface InputSegwit extends InTransaction {
 }
 
 export interface InputScript {
-    hexTxid: Uint8Array,
-    hexTxindex: Uint8Array,
-    hexScript: Uint8Array,
-    hexScriptToSig?: Uint8Array,
-    hexScriptLength: Uint8Array,
-    hexSequence: Uint8Array,
-    hexScriptSig?: Uint8Array,
-    hexValue?: Uint8Array,
+    hexTxid: string,
+    hexTxindex: string,
+    hexScript: string,
+    hexScriptToSig?: string,
+    hexScriptLength: string,
+    hexSequence: string,
+    hexScriptSig?: string,
+    hexValue?: string,
     isSegwit?: boolean
 }
 
@@ -50,9 +52,9 @@ export interface OutputTransaction {
 }
 
 export interface OutPutScript {
-    hexValue: Uint8Array,
-    hexScriptLength: Uint8Array,
-    hexScript: Uint8Array
+    hexValue: string,
+    hexScriptLength: string,
+    hexScript: string
 }
 
 export interface ECOptions {

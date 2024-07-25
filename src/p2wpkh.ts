@@ -43,19 +43,19 @@ export class P2WPKH extends BaseTransaction {
         this.inputs.forEach(input => {
 
             let hexTxid = input.txid // txid not little-endian
-            let hexTxindex = numberToHexLE(input.txindex, 32) // little-endian
-            let hexValue = numberToHexLE(input.value, 64) // value little-endian 64bits
+            let hexTxindex = String(numberToHexLE(input.txindex, 32)) // little-endian
+            let hexValue = String(numberToHexLE(input.value, 64)) // value little-endian 64bits
 
             let hash160 = bech32.getScriptPubkey(input.address ?? "") // the 20 bytes -> 160 bits
             let hexScriptToSig = hash160ToScript(hash160)
-            let hexScriptToSigLength = numberToHex(hexScriptToSig.length, 8)
+            let hexScriptToSigLength = String(numberToHex(hexScriptToSig.length / 2, 8))
             hexScriptToSig = hexScriptToSigLength + hexScriptToSig
                   
             let hexScript = "" //numberToHex(input?.scriptPubkey?.length / 2, 8) + input.scriptPubkey 
 
             let hexScriptLength = "" // numberToHex(hexScript.length / 2, 8)
 
-            let hexSequence = input.sequence ? numberToHexLE(input.sequence, 32) : "ffffffff" // 0xffffffff - 32bits
+            let hexSequence = input.sequence ? String(numberToHexLE(input.sequence, 32)) : "ffffffff" // 0xffffffff - 32bits
 
             this.inputScripts.push({ hexTxid, hexTxindex, hexValue, hexScript, hexScriptLength, hexScriptToSig, hexSequence })
         })
@@ -64,12 +64,12 @@ export class P2WPKH extends BaseTransaction {
 
         this.outputs.forEach(out => {
             // value little-endian
-            let hexValue = numberToHexLE(out.value, 64) // 64bits
+            let hexValue = String(numberToHexLE(out.value, 64)) // 64bits
             let hash160 = bech32.getScriptPubkey(out.address) // the 20 bytes -> 160 bits
 
             let hash160Length = (hash160.length / 2).toString(16) // 0x14 == 20
             let hexScript = OP_CODES.OP_0 + hash160Length + hash160 //OP_CODES.OP_DUP + OP_CODES.OP_HASH160 + hash160Length + hash160 + OP_CODES.OP_EQUALVERIFY + OP_CODES.OP_CHECKSIG
-            let hexScriptLength = numberToHex(hexScript.length / 2, 8) // ~0x19 = ~25
+            let hexScriptLength = String(numberToHex(hexScript.length / 2, 8)) // ~0x19 = ~25
 
             this.outputScripts.push({ hexValue, hexScriptLength, hexScript })
         })
@@ -86,19 +86,19 @@ export class P2WPKH extends BaseTransaction {
 
             let hexTransaction: string = this.buildToSign(input)
 
-            input.hexScriptSig = this.buildSignature(hexTransaction)
+            input.hexScriptSig = String(this.buildSignature(hexTransaction))
         })
     }
 
     private buildToSign(input: InputScript) {
 
         // set transaction version
-        let hexTransaction: string = numberToHexLE(this.version, 32) // hexadecimal 32bits little-endian 1 = 01000000 
+        let hexTransaction: string = String(numberToHexLE(this.version, 32)) // hexadecimal 32bits little-endian 1 = 01000000 
 
         // set hash outpoint segwit of all inputs
-        hexTransaction += sha256(hexToBytes(this.inputScripts.map(x => x.hexTxid + x.hexTxindex).join("")), true)
+        hexTransaction += sha256(this.inputScripts.map(x => x.hexTxid + x.hexTxindex).join(""), true)
         // set hash sequence
-        hexTransaction += sha256(hexToBytes(this.inputScripts.map(x => x.hexSequence).join("")), true)
+        hexTransaction += sha256(this.inputScripts.map(x => x.hexSequence).join(""), true)
 
         // set txid in little-endian
         hexTransaction += input.hexTxid
@@ -119,13 +119,13 @@ export class P2WPKH extends BaseTransaction {
         hexTransaction += input.hexSequence
 
         // set hash outputs 
-        hexTransaction += sha256(hexToBytes(this.outputScripts.map(x => x.hexValue + x.hexScriptLength + x.hexScript).join("")), true)
+        hexTransaction += sha256(this.outputScripts.map(x => x.hexValue + x.hexScriptLength + x.hexScript).join(""), true)
 
         // set locktime hexadecimal int32bits little-endian 1 = 01000000
-        hexTransaction += numberToHexLE(this.locktime, 32)
+        hexTransaction += String(numberToHexLE(this.locktime, 32))
 
         // set SIGHASH_ALL hexadecimal int32bits little-endian 1 = 01000000
-        hexTransaction += numberToHexLE(1, 32)
+        hexTransaction += String(numberToHexLE(1, 32))
 
         return hexTransaction
     }
@@ -133,13 +133,13 @@ export class P2WPKH extends BaseTransaction {
     private buildRow() {
 
         // includes the transaction version
-        let hexTransaction: string = numberToHexLE(this.version, 32)
+        let hexTransaction: string = String(numberToHexLE(this.version, 32))
 
         // includes the segwit marker 0x00 and flag 0x01 which allow nodes to identify this as a SegWit transaction
         hexTransaction += "0001"
 
         // includes the number of inputs
-        hexTransaction += numberToHexLE(this.inputs.length, 8)
+        hexTransaction += String(numberToHexLE(this.inputs.length, 8))
 
         this.inputScripts.forEach(input => {
             // includes the txid
@@ -182,7 +182,7 @@ export class P2WPKH extends BaseTransaction {
         })
 
         // includes locktime hexadecimal int32bits little-endian 1 = 01000000
-        hexTransaction += numberToHexLE(this.locktime, 32)
+        hexTransaction += String(numberToHexLE(this.locktime, 32))
 
         return hexTransaction
     }
@@ -190,7 +190,7 @@ export class P2WPKH extends BaseTransaction {
     public getTxid() {
         let transactionRow = this.build()
 
-        let hash256 = sha256(hexToBytes(transactionRow), true)
+        let hash256 = sha256(transactionRow, true)
 
         // return hash256 little-endian
         return reverseHexLE(hash256)
