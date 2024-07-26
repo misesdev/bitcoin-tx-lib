@@ -45,7 +45,8 @@ describe("utils", () => {
 
         error = false
         try { hexToBytes("80ff05f") } catch { error = true }
-        // deve ocorrer um erro de validação, pois o valor está incorreto
+        // a validation error should occur as the value is incorrect
+
         expect(error).toBe(true)
     })
     it("hash sha256 and hash256", () => {
