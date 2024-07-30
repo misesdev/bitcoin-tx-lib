@@ -90,7 +90,7 @@ export class P2WPKH extends BaseTransaction {
         })
     }
 
-    private buildToSign(input: InputScript) {
+    private buildToSign(input: InputScript): string {
 
         // set transaction version
         let hexTransaction: string = String(numberToHexLE(this.version, 32)) // hexadecimal 32bits little-endian 1 = 01000000 
@@ -147,14 +147,15 @@ export class P2WPKH extends BaseTransaction {
             // includes the tx index
             hexTransaction += input.hexTxindex
         
-            //if (input.hexScript.substring(2, 6) == "76a9")
+            if (input.hexScript.substring(2, 6) == "76a9")
                 // includes the scriptSig which in the segwit case is 0x00 as the scriptsig will be in the witness field
                 hexTransaction += "00"
 
-            //if (input.hexScript.substring(2, 6) !== "76a9") {
-            //    hexTransaction += input.hexScriptLength
-            //    hexTransaction += input.hexScript
-            //}
+            if (input.hexScript.substring(2, 6) !== "76a9") {
+                hexTransaction += input.hexScriptLength
+                hexTransaction += input.hexScript
+            }
+
             // includes the sequence 
             hexTransaction += input.hexSequence
         })

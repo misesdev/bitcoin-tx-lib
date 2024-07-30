@@ -24,35 +24,37 @@ export class Transaction extends BaseTransaction {
   }
 
   public build(): string {
-    let hexTransaction = ""
+    let hexTransaction = String(numberToHexLE(this.version, 32))
 
-    hexTransaction += numberToHexLE(this.version, 32)
+    hexTransaction += ""
 
     return hexTransaction
   }
 
   public buildRow(): string {
-    let hexTransaction = ""
+    let hexTransaction = String(numberToHexLE(this.version, 32))
+    
+    hexTransaction += ""
 
     return hexTransaction
   }
 
   public buildToSign(): string {
-    let hexTransaction = numberToHexLE(this.version, 32)
+    let hexTransaction = String(numberToHexLE(this.version, 32))
 
-    hexTransaction += numberToHex(this.inputs.length, 8) 
+    hexTransaction += String(numberToHex(this.inputs.length, 8)) 
 
     hexTransaction += this.inputScripts.map(input => {
       return input.hexTxid + input.hexTxindex + input.hexSequence
     }).join("")
 
-    hexTransaction += numberToHex(this.outputs.length, 8)
+    hexTransaction += String(numberToHex(this.outputs.length, 8))
 
     hexTransaction += this.outputScripts.map(output => {
       return output.hexScriptLength + output.hexScript + output.hexValue
     }).join("")
 
-    hexTransaction += numberToHexLE(this.locktime, 32)
+    hexTransaction += String(numberToHexLE(this.locktime, 32))
 
     return hexTransaction
   }
@@ -61,9 +63,9 @@ export class Transaction extends BaseTransaction {
     
     let hexTransaction = this.build()
 
-    let hash256 = sha256(hexToBytes(hexTransaction), true)
+    let hash256 = sha256(hexTransaction, true)
 
-    return bytesToHex(reverseEndian(hexToBytes(hash256)))
+    return String(reverseEndian(hash256))
   }
 }
 
