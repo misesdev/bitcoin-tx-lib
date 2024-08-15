@@ -16,6 +16,9 @@ export class Transaction extends BaseTransaction {
   }
 
   public addInput(input: InputTransaction) {
+  
+    if(input.txid.length < 10)
+        throw new Error("txid is required")
     this.inputs.push(input)
   }
 
