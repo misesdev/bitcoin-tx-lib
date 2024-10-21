@@ -5,71 +5,76 @@ import { bytesToHex, hexToBytes, numberToHex, numberToHexLE, reverseEndian, sha2
 
 export class Transaction extends BaseTransaction {
   
-  public inputs: InputTransaction[] = []
-  public outputs: OutputTransaction[] =[]
-  private inputScripts: InputScript[] = []
-  private outputScripts: OutPutScript[] = []
+    public inputs: InputTransaction[] = []
+    public outputs: OutputTransaction[] =[]
+    private inputScripts: InputScript[] = []
+    private outputScripts: OutPutScript[] = []
 
-  constructor(pairkey: ECPairKey) {
-    super(pairkey)
-    this.version = 2
-  }
+    constructor(pairkey: ECPairKey) {
+        super(pairkey)
+        this.version = 2
+    }
 
-  public addInput(input: InputTransaction) {
+    public addInput(input: InputTransaction) {
   
-    if(input.txid.length < 10)
-        throw new Error("txid is required")
-    this.inputs.push(input)
-  }
+        if(input.txid.length < 10)
+            throw new Error("Expected txid value!")
+        
+        this.inputs.push(input)
+    }
 
-  public addOutput(output: OutputTransaction) {
-    this.outputs.push(output)
-  }
+    public addOutput(output: OutputTransaction) {
 
-  public build(): string {
-    let hexTransaction = String(numberToHexLE(this.version, 32))
+        if(output.address.length <= 10)
+            throw new Error("Expected address value!")
+        this.outputs.push(output)
+    }
 
-    hexTransaction += ""
+    public build(): string {
+        let hexTransaction = String(numberToHexLE(this.version, 32))
 
-    return hexTransaction
-  }
+        hexTransaction += ""
 
-  public buildRow(): string {
-    let hexTransaction = String(numberToHexLE(this.version, 32))
+        return hexTransaction
+    }
+
+    public buildRow(): string {
+        let hexTransaction = String(numberToHexLE(this.version, 32))
     
-    hexTransaction += ""
+        hexTransaction += ""
 
-    return hexTransaction
-  }
+        return hexTransaction
+    }
 
-  public buildToSign(): string {
-    let hexTransaction = String(numberToHexLE(this.version, 32))
+    public buildToSign(): string {
+        let hexTransaction = String(numberToHexLE(this.version, 32))
 
-    hexTransaction += String(numberToHex(this.inputs.length, 8)) 
+        hexTransaction += String(numberToHex(this.inputs.length, 8)) 
 
-    hexTransaction += this.inputScripts.map(input => {
-      return input.hexTxid + input.hexTxindex + input.hexSequence
-    }).join("")
+        hexTransaction += this.inputScripts.map(input => {
+            return input.hexTxid + input.hexTxindex + input.hexSequence
+        }).join("")
 
-    hexTransaction += String(numberToHex(this.outputs.length, 8))
+        hexTransaction += String(numberToHex(this.outputs.length, 8))
 
-    hexTransaction += this.outputScripts.map(output => {
-      return output.hexScriptLength + output.hexScript + output.hexValue
-    }).join("")
+        hexTransaction += this.outputScripts.map(output => {
+            return output.hexScriptLength + output.hexScript + output.hexValue
+        }).join("")
 
-    hexTransaction += String(numberToHexLE(this.locktime, 32))
+        hexTransaction += String(numberToHexLE(this.locktime, 32))
 
-    return hexTransaction
-  }
+        return hexTransaction
+    }  
 
-  public getTxid(): string {
+    public getTxid(): string {
     
-    let hexTransaction = this.build()
+        let hexTransaction = this.build()
 
-    let hash256 = sha256(hexTransaction, true)
+        let hash256 = sha256(hexTransaction, true)
 
-    return String(reverseEndian(hash256))
-  }
+        return String(reverseEndian(hash256))
+    }
 }
+
 
 
