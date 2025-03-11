@@ -1,4 +1,3 @@
-
 type Bytes = Uint8Array;
 
 export type Hex = Uint8Array | string

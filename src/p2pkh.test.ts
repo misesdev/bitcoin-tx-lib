@@ -34,7 +34,6 @@ describe("P2PKH switch", () => {
             2888ac00000000`.replace(/\s/g, ""))
     })
     it("create transaction row with 2 inputs or more", () => {
-
         // add the second input
         transaction.addInput({
             txindex: 0,

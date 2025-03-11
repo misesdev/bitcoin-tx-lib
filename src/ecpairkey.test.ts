@@ -62,6 +62,16 @@ describe("ECPairKey", () => {
         // a validation error should occur because the last 4 bytes assigned to the checksum are incorrect
         expect(error).toBe(true)
     })
+    it("import from hex", () => {
+        const pairKey = ECPairKey.fromHex({ 
+            privateKey: "9d01e9e28cba0217c5826838596733b2cf86a54fff3eabcabec90a2acdc101d8", 
+            network: "testnet" 
+        })
+        
+        const address = pairKey.getAddress(true)
+
+        expect(address).toBe("tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj")
+    })
     it("get bitcoin address", () => {
         const pairKey = ECPairKey.fromWif("5KCyEgVQ93iZoJ81tYrknfpry9LopRhJgBTdMFsapamox69wdar")//new ECPairKey()
 

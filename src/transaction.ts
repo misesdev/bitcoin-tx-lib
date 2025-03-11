@@ -1,7 +1,8 @@
 import { BaseTransaction } from "./base/txbase";
 import { ECPairKey } from "./ecpairkey";
-import { InputScript, InputTransaction, OutPutScript, OutputTransaction } from "./types";
-import { bytesToHex, hexToBytes, numberToHex, numberToHexLE, reverseEndian, sha256 } from "./utils";
+import { InputScript, OutPutScript } from "./types";
+import { InputTransaction, OutputTransaction } from "./types/transaction"
+import { hexToBytes, numberToHex, numberToHexLE, reverseEndian, sha256 } from "./utils";
 
 export class Transaction extends BaseTransaction {
   
@@ -18,7 +19,9 @@ export class Transaction extends BaseTransaction {
     public addInput(input: InputTransaction) {
   
         if(input.txid.length < 10)
-            throw new Error("Expected txid value!")
+            throw new Error("Expected txid value")
+        else if(!input.scriptPubKey)
+            throw new Error("Expected scriptPubKey")
         
         this.inputs.push(input)
     }
@@ -74,6 +77,15 @@ export class Transaction extends BaseTransaction {
 
         return String(reverseEndian(hash256))
     }
+
+    public isSegwit() : boolean {
+        return this.inputs.some(input => { 
+            const bytes = hexToBytes(input.scriptPubKey)
+            return bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14
+        })
+    }
+
+
 }
 
 

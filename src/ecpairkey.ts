@@ -155,6 +155,10 @@ export class ECPairKey {
         return new ECPairKey({ privateKey: wifHex.substring(2, wifHex.length - 8), network: options?.network });
     }
 
+    static fromHex({ privateKey, network="mainnet" }: ECOptions) {
+        return new ECPairKey({ privateKey, network })
+    }
+
     static verifyWif(wifHex: string): boolean {
 
         let bytes = hexToBytes(wifHex)

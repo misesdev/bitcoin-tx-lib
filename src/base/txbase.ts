@@ -1,9 +1,8 @@
 import { SIGHASH_ALL } from "../constants/generics"
 import { ECPairKey } from "../ecpairkey"
-import { bytesToHex, hexToBytes, mergeUint8Arrays, numberToHex, sha256 } from "../utils"
+import { Hex } from "../types"
+import { bytesToHex, hexToBytes, numberToHex, sha256 } from "../utils"
 import { Base58 } from "./base58"
-
-type Hex = string | Uint8Array
 
 export class BaseTransaction {
 
