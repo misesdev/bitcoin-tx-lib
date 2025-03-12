@@ -4,7 +4,7 @@ import { BaseTransaction } from "./base/txbase";
 import { OP_CODES } from "./constants/opcodes";
 import { ECPairKey } from "./ecpairkey";
 import { InputScript, InputSegwit, OutPutScript, OutputTransaction } from "./types";
-import { hash160ToScript, hexToBytes, numberToHex, numberToHexLE, reverseHexLE, sha256 } from "./utils";
+import { hash160ToScript, numberToHex, numberToHexLE, reverseHexLE, sha256 } from "./utils";
 
 export class P2WPKH extends BaseTransaction {
 

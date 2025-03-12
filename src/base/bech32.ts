@@ -154,7 +154,12 @@ export class Bech32 {
             return null
         }
 
-        return data.slice(0, data.length - 6) // { hrp, data: data.slice(0, data.length - 6) }
+        var program = data.slice(0, data.length - 6)
+
+        var hash = new Uint8Array(program.length)
+        program.forEach((num, index) => hash[index] = num)
+
+        return hash
     }
 
     public getScriptPubkey(bech32Address: string) {
