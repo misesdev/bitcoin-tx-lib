@@ -6,7 +6,7 @@ import { Base58 } from "./base58"
 
 export class BaseTransaction {
 
-    public version: number = 1
+    public version: number = 2
     public locktime: number = 0
     public pairKey: ECPairKey
     
@@ -31,11 +31,11 @@ export class BaseTransaction {
         signature += SIGHASH_ALL
 
         // append the length of signature + SIGHASH hexadecimal int8bits 1 = 01
-        signature = String(numberToHex(signature.length / 2, 8, "string")) + signature
+        signature = String(numberToHex(signature.length / 2, 8)) + signature
 
         let compressedPublicKey = Base58.decode(this.pairKey.getPublicKeyCompressed())
 
-        let compressedPublicKeyLength = String(numberToHex(compressedPublicKey.length / 2, 8, "string")) // hexadecimal int8bits 1 = 01
+        let compressedPublicKeyLength = String(numberToHex(compressedPublicKey.length / 2, 8)) // hexadecimal int8bits 1 = 01
 
         let scriptSigned = signature + compressedPublicKeyLength + compressedPublicKey
 

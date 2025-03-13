@@ -3,7 +3,7 @@ import { ripemd160 as ripemd160Noble } from "@noble/hashes/ripemd160"
 import { sha256 as sha256Noble } from "@noble/hashes/sha256"
 import { Hex } from "./types"
 
-type Response = "string" | "bytes"
+type Response = "hex" | "bytes"
 
 export function bytesToHex(bytes: Hex): string {
 
@@ -109,7 +109,7 @@ export function reverseEndian(hex: Hex): Hex {
     return hexLE
 }
 
-export function numberToHex(number: number = 0, bits: number = 64, result: Response = "string"): Hex {
+export function numberToHex(number: number = 0, bits: number = 64, result: Response = "hex"): Hex {
 
     let hexValue = number.toString(16) // string hexadecimal
 
@@ -120,14 +120,14 @@ export function numberToHex(number: number = 0, bits: number = 64, result: Respo
         hexValue = "0" + hexValue
     }
 
-    if(result == "string")
+    if(result == "hex")
         return hexValue
 
     return hexToBytes(hexValue)
 }
 
 // Convert a integer number in Uint8Array(16) // 64 bits little-endian
-export function numberToHexLE(number: number = 0, bits: number = 64, result: Response = "string"): Hex {
+export function numberToHexLE(number: number = 0, bits: number = 64, result: Response = "hex"): Hex {
 
     bits = bits < 8 ? 8 : bits
     
@@ -136,7 +136,7 @@ export function numberToHexLE(number: number = 0, bits: number = 64, result: Res
     for (let i = hexValue.length; i < bits / 4; i++)
         hexValue = "0" + hexValue
 
-    if(result == "string")
+    if(result == "hex")
         return reverseEndian(hexValue)
 
     return hexToBytes(hexValue).reverse()
@@ -146,17 +146,28 @@ export function hash160ToScript(hash160: Hex): Hex {
     
     let data = hash160
 
-    if(typeof(hash160) !== "string")
-        data = bytesToHex(hash160)
+    if(typeof(hash160) !== "object")
+        data = hexToBytes(hash160)
 
-    let hash160Length = numberToHex(data.length / 2, 8) // 0x14 == 20
+    let hash160Length = data.length // 0x14 == 20 && 0x20 == 34
 
-    let hexScript = OP_CODES.OP_DUP + OP_CODES.OP_HASH160 + hash160Length + data + OP_CODES.OP_EQUALVERIFY + OP_CODES.OP_CHECKSIG
+    // OP_DUP+OP_HASH160+PK_HASH_LENGTH+PUBKEY_HASH+OP_EQUALVERIFY+OP_CHECKSIG
+    let hexScript = mergeUint8Arrays(new Uint8Array([
+            OP_CODES.OP_DUP, 
+            OP_CODES.OP_HASH160, 
+            hash160Length
+        ]),
+        data as Uint8Array,
+        new Uint8Array([
+            OP_CODES.OP_EQUALVERIFY,
+            OP_CODES.OP_CHECKSIG 
+        ])
+    )
 
     if(typeof(hash160) == "string")
-        return hexScript
+        return bytesToHex(hexScript)
 
-    return hexToBytes(hexScript)
+    return hexScript
 }
 
 export function reverseHexLE(hex: Hex, isBytes: boolean = true) : Hex {
@@ -199,4 +210,31 @@ export function isEqual(...arrays: Uint8Array[]): boolean {
     })
 
     return result
+}
+
+export function numberToVarTnt(value: number, resultType: Response = "hex"): Hex {
+
+    let result: Uint8Array
+    if (value < 0xfd) {
+        result = new Uint8Array([value])
+    } else if (value <= 0xffff) {
+        var number = numberToHexLE(value, 16, "bytes") as Uint8Array
+        result = mergeUint8Arrays(new Uint8Array([0xfd]), number)
+    } else if (value <= 0xffffffff) {
+        let number = numberToHexLE(value, 32, "bytes") as Uint8Array
+        result = mergeUint8Arrays(new Uint8Array([0xfe]), number)
+    } else { 
+        let number = numberToHexLE(value, 64, "bytes") as Uint8Array
+        result = mergeUint8Arrays(new Uint8Array([0xff]), number)
+    }
+    
+    if(resultType == "hex")
+        return bytesToHex(result)
+
+    return result
+}
+
+export function getBytesCount(hex: string) : number 
+{
+    return hex.length / 2;
 }

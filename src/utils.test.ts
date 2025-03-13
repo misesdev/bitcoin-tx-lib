@@ -1,12 +1,14 @@
 import { 
     bytesToHex, 
     checksum, 
+    getBytesCount, 
     hash160ToScript, 
     hexToBytes, 
     isEqual, 
     mergeUint8Arrays, 
     numberToHex, 
     numberToHexLE, 
+    numberToVarTnt, 
     reverseEndian, 
     reverseHexLE, 
     ripemd160, 
@@ -152,5 +154,27 @@ describe("utils", () => {
         result = isEqual(arr1, arr1, arr1, arr2)
 
         expect(false).toBe(result)
+    })
+    it("convert a number to little-endian varint", () => {
+        let result = numberToVarTnt(250)
+        
+        expect("fa").toBe(result)
+
+        result = numberToVarTnt(255)
+
+        expect("fdff")
+
+        result = numberToVarTnt(300)
+
+        expect("fd2c01")
+    })
+    it("getBytesCount from hex", () => {
+        let result = getBytesCount("ffff")
+
+        expect(2).toBe(result)
+
+        result = getBytesCount("ffffffff")
+
+        expect(4).toBe(result)
     })
 }) 
