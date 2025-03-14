@@ -25,7 +25,8 @@ transaction.addOutput({
 })
 
 describe("P2PKH switch", () => {
-    it("create transaction row with 1 input", () => {
+    
+    test("create transaction row with 1 input", () => {
         expect(transaction.getTxid()).toBe("c59f0ae385c21f6302375cf5db918862d2819943f42bab44faf80c711da9bbad")
         expect(transaction.build()).toBe(`0100000001f3a27f485f9833c8318c490403307fef1397121b5dd8fe70777236e7371c4ef3000000006a473044
             02202662ba9ace06653baf83f4114965ddef6dc11d7c404d523635b0503aac68bbe902205b08149bf42dfd8137a6e28babe70c74e87011f23e95c547
@@ -33,7 +34,8 @@ describe("P2PKH switch", () => {
             18ba14b3682295cb05230e31fecb00089240660888ace084b003000000001976a914a65d1a239d4ec666643d350c7bb8fc44d28811
             2888ac00000000`.replace(/\s/g, ""))
     })
-    it("create transaction row with 2 inputs or more", () => {
+    
+    test("create transaction row with 2 inputs or more", () => {
         // add the second input
         transaction.addInput({
             txindex: 0,
@@ -50,7 +52,8 @@ describe("P2PKH switch", () => {
             7df42645cffffffff02e0fe7e01000000001976a91418ba14b3682295cb05230e31fecb00089240660888ace084b003000000001976a914a65d1a239d4e
             c666643d350c7bb8fc44d288112888ac00000000`.replace(/\s/g, ""))
     })
-    it("build signature", () => {
+
+    test("build signature", () => {
         transaction.generateSignatures()
 
         let scriptSig = transaction.inputScripts[0].hexScriptSig

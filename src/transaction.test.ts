@@ -1,15 +1,16 @@
 import { ECPairKey } from "./ecpairkey"
 import { Transaction } from "./transaction"
 
-const pairkey = ECPairKey.fromHex({
-    privateKey: "9d01e9e28cba0217c5826838596733b2cf86a54fff3eabcabec90a2acdc101d8",
-    network: "testnet"
-})
-
-const transaction = new Transaction(pairkey, { network: "testnet" })
-
 describe("default transaction tests", () => {
-    it("segwit transaction", () => {
+    
+    const pairkey = ECPairKey.fromHex({
+        privateKey: "9d01e9e28cba0217c5826838596733b2cf86a54fff3eabcabec90a2acdc101d8",
+        network: "testnet"
+    })
+
+    const transaction = new Transaction(pairkey, { network: "testnet" })
+    
+    test("segwit transaction", () => {
         
         transaction.addInput({
             txid: "3c70b68362641d536744a0b35568b6e0d7be432d2d5113e646f3e8a64c2322c4",

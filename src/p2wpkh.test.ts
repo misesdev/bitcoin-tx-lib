@@ -54,7 +54,8 @@ transaction.addOutput({ // change
 // segwit 04d984cdcf728975c173c45c49a242cedee2da5dc200b2f83ca6a98aecf11280
 
 describe("P2WPKH transaction", () => {
-    it("build signature", () => {
+    
+    test("build signature", () => {
 
         transaction.build()
 
@@ -67,7 +68,8 @@ describe("P2WPKH transaction", () => {
         //    60b78a4d30b5cad26996217f`.replace(/\s/g, ""))
         expect(true).toBe(1==1)
     })
-    it("build transaction row", () => {
+    
+    test("build transaction row", () => {
         
         //expect(transaction.build()).toBe(`02000000000103000000b45ede2886cac1c6b7835f86bf549b3cfaaf326e14865b2952a6bce399f64e0
         //    301000000232251200683f3cb53225bcc286ade76026ff7a186b43349c532892c6c3ada4e334a4176ffffffffe9a119d81f1a2a720a

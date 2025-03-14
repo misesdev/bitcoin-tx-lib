@@ -13,10 +13,11 @@ import {
     reverseHexLE, 
     ripemd160, 
     sha256 
-} from "./utils"
+} from "./index"
 
 describe("utils", () => {
-    it("bytes to hex string", () => {
+
+    test("bytes to hex string", () => {
         let bytes = new Uint8Array(4)
         let array = [5, 128, 255, 255]
         array.forEach((byte, index) => bytes[index] = byte)
@@ -26,11 +27,15 @@ describe("utils", () => {
         expect(hex).toBe("0580ffff")
 
         let error = false
-        try { bytesToHex(new Uint8Array()) } catch { error = true }
-        // a validation error should occur as the value is empty
-        expect(error).toBe(true)
+        try { bytesToHex(new Uint8Array()) } 
+        catch { error = true }
+        finally {
+            // a validation error should occur as the value is empty
+            expect(error).toBe(true)
+        }
     })
-    it("hex to byte array", () => {
+
+    test("hex to byte array", () => {
         let hex = "0580ffff"
 
         let bytes = hexToBytes(hex)
@@ -51,7 +56,8 @@ describe("utils", () => {
 
         expect(error).toBe(true)
     })
-    it("hash sha256 and hash256", () => {
+
+    test("hash sha256 and hash256", () => {
         const hash = sha256("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D")
 
         expect(hash).toBeDefined()
@@ -60,12 +66,14 @@ describe("utils", () => {
         
         expect(hash256).toBe("507a5b8dfed0fc6fe8801743720cedec06aa5c6fca72b07c49964492fb98a714")
     })
-    it("hash checksum", () => {
+
+    test("hash checksum", () => {
         const checksumBytes = checksum(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"))
         
         expect(bytesToHex(checksumBytes)).toBe("507a5b8d")
     })
-    it("hash ripemd160", () => {
+
+    test("hash ripemd160", () => {
 
         let sha256 = "6b23c0eabc34e97f4b5f8c2277d6b7f6869b16dfb4f2c284b94efc13a3d81b0c"
 
@@ -82,7 +90,8 @@ describe("utils", () => {
    
         expect(bytesToHex(hash)).toBe("58077dda57de14ac9f055c64bf3c71ff0b5796da")
     })
-    it("reverse endian bytes", () => {
+
+    test("reverse endian bytes", () => {
         const bytes = new Uint8Array(4)
 
         bytes[0] = 0x80
@@ -97,21 +106,24 @@ describe("utils", () => {
         expect(letleEndian[2]).toBe(0x45)
         expect(letleEndian[3]).toBe(0x80)
     })
-    it("convert a number integer in hexadecimal", () => {
+
+    test("convert a number integer in hexadecimal", () => {
         let hexNumber = numberToHex(1, 32) // 32bits
         expect(hexNumber).toBe("00000001")
 
         hexNumber = numberToHex(0, 32)
         expect(hexNumber).toBe("00000000")
     })
-    it("convert a number integer in hexadecimal(little-endian)", () => {
+
+    test("convert a number integer in hexadecimal(little-endian)", () => {
         let hexNumber = numberToHexLE(1, 32) // 32bits
         expect(hexNumber).toBe("01000000")
 
         hexNumber = numberToHexLE(0, 32)
         expect(hexNumber).toBe("00000000")
     })
-    it("generate script from hash160", () => {
+
+    test("generate script from hash160", () => {
 
         let scripthash = "18ba14b3682295cb05230e31fecb000892406608"
 
@@ -123,13 +135,15 @@ describe("utils", () => {
 
         expect(script).toBe("76a9146bf19e55f94d986b4640c154d86469934191951188ac")
     })
-    it("convert hexadecimal string bytes in little-endian", () => {
+
+    test("convert hexadecimal string bytes in little-endian", () => {
 
         let little = reverseHexLE(new Uint8Array([0xff, 0x80, 0x99]))
 
         expect(bytesToHex(little)).toBe("9980ff")
     })
-    it("merge Uint8Arrays", () => {
+
+    test("merge Uint8Arrays", () => {
         let arr1 = new Uint8Array([0x01, 0x05])
         let arr2 = new Uint8Array([0x55, 0xff])
 
@@ -139,7 +153,8 @@ describe("utils", () => {
         expect(result[0]).toBe(0x01)
         expect(result[3]).toBe(0xff)
     })
-    it("compare Uint8Arrays isEqual", () => {
+
+    test("compare Uint8Arrays isEqual", () => {
         let arr1 = new Uint8Array([0x55, 0xff, 0xf1])
         let arr2 = new Uint8Array([0x06, 0xf5, 0x88])
 
@@ -155,7 +170,8 @@ describe("utils", () => {
 
         expect(false).toBe(result)
     })
-    it("convert a number to little-endian varint", () => {
+
+    test("convert a number to little-endian varint", () => {
         let result = numberToVarTnt(250)
         
         expect("fa").toBe(result)
@@ -168,7 +184,8 @@ describe("utils", () => {
 
         expect("fd2c01")
     })
-    it("getBytesCount from hex", () => {
+
+    test("getBytesCount from hex", () => {
         let result = getBytesCount("ffff")
 
         expect(2).toBe(result)

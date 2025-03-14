@@ -157,6 +157,7 @@ export class Bech32 {
         var program = data.slice(0, data.length - 6)
 
         var hash = new Uint8Array(program.length)
+
         program.forEach((num, index) => hash[index] = num)
 
         return hash

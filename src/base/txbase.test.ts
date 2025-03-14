@@ -2,7 +2,8 @@ import { ECPairKey } from "../ecpairkey"
 import { BaseTransaction } from "./txbase"
 
 describe("transaction base class", () => {
-    it("add input", () => {
+    
+    test("add input", () => {
         let pairKey = new ECPairKey()
         let transaction = new BaseTransaction(pairKey)
 
@@ -17,7 +18,7 @@ describe("transaction base class", () => {
         expect(transaction.locktime).toBe(0)
     })
 
-    it("add output", () => {
+    test("add output", () => {
         let pairKey = new ECPairKey()
         let transaction = new BaseTransaction(pairKey)
 

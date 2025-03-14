@@ -1,7 +1,7 @@
-import { OP_CODES } from "./constants/opcodes"
+import { OP_CODES } from "../constants/opcodes"
 import { ripemd160 as ripemd160Noble } from "@noble/hashes/ripemd160"
 import { sha256 as sha256Noble } from "@noble/hashes/sha256"
-import { Hex } from "./types"
+import { Hex } from "../types"
 
 type Response = "hex" | "bytes"
 
@@ -26,18 +26,22 @@ export function bytesToHex(bytes: Hex): string {
 }
 
 export function hexToBytes(hex: string, hexadecimal: boolean = true): Uint8Array {
-    if (!!!hex)
-        throw new Error("hex is undefined or empty!")
+    
+    if(hex.length <= 0)
+        throw new Error("hex value is empty")
+
     if (hexadecimal && hex.length % 2 !== 0)
         throw new Error("Invalid hex value!")
 
     let bytes = new Uint8Array(hexadecimal ? hex.length / 2 : hex.length)
 
-    for (let i = 0; i <= hex.length; i += hexadecimal ? 2 : 1)
+    for (let i = 0; i <= hex.length; i += hexadecimal ? 2 : 1) 
+    {
         if (hexadecimal)
             bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16)
         else
             bytes[i] = hex.charCodeAt(i)
+    }
 
     return bytes;
 }

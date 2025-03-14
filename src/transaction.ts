@@ -1,11 +1,12 @@
-import { Base58 } from "./base/base58";
-import { Bech32 } from "./base/bech32";
 import { BaseTransaction } from "./base/txbase";
 import { OP_CODES } from "./constants/opcodes";
 import { ECPairKey } from "./ecpairkey";
 import { BNetwork, Hex } from "./types";
 import { InputTransaction, OutputTransaction } from "./types/transaction"
-import { bytesToHex, getBytesCount, hash160ToScript, hexToBytes, mergeUint8Arrays, numberToHex, numberToHexLE, numberToVarTnt, reverseEndian, sha256 } from "./utils";
+import { bytesToHex, getBytesCount, hash160ToScript, hexToBytes, 
+    numberToHex, numberToHexLE, numberToVarTnt, reverseEndian, 
+    sha256 } from "./utils";
+import { addressToScriptPubKey } from "./utils/txutils";
 
 interface TXOptions {
     version?: number;
@@ -18,14 +19,15 @@ export class Transaction extends BaseTransaction {
     public outputs: OutputTransaction[] =[]
     private network: BNetwork = "mainnet"
 
-    constructor(pairkey: ECPairKey, options?: TXOptions) {
+    constructor(pairkey: ECPairKey, options?: TXOptions) 
+    {
         super(pairkey)
         this.version = options?.version ?? 2
         this.network = options?.network ?? "mainnet"
     }
 
-    public addInput(input: InputTransaction) {
-  
+    public addInput(input: InputTransaction) 
+    {  
         if(input.txid.length < 10)
             throw new Error("Expected txid value")
         else if(!input.scriptPubKey)
@@ -34,8 +36,8 @@ export class Transaction extends BaseTransaction {
         this.inputs.push(input)
     }
 
-    public addOutput(output: OutputTransaction) {
-
+    public addOutput(output: OutputTransaction) 
+    {
         if(output.address.length <= 10)
             throw new Error("Expected address value")
         if(output.amount <= 0)
@@ -56,10 +58,10 @@ export class Transaction extends BaseTransaction {
         hexTransaction += numberToVarTnt(this.inputs.length) // number of inputs
 
         this.inputs.forEach((input, index) => {
-            hexTransaction += numberToHexLE(input.vout, 32) // index output (vout)
             hexTransaction += reverseEndian(input.txid) // txid
+            hexTransaction += numberToHexLE(input.vout, 32) // index output (vout)
 
-            if(this.isSegwitInput(index)) {
+            if(this.isSegwitInput(input)) {
                 const scriptSig = this.generateSegWitScriptSig(index, "hex") as string
                 segwitData += "02"+scriptSig
                 hexTransaction += "00" // script sig in witness area // P2WPKH 
@@ -74,7 +76,7 @@ export class Transaction extends BaseTransaction {
 
         this.outputs.forEach(output => {
             hexTransaction += numberToHexLE(output.amount, 64)
-            const scriptPubKey = this.addressToScriptPubKey(output.address)
+            const scriptPubKey = addressToScriptPubKey(output.address)
             hexTransaction += numberToVarTnt(scriptPubKey.length)
             hexTransaction += bytesToHex(scriptPubKey)
         })
@@ -89,8 +91,8 @@ export class Transaction extends BaseTransaction {
         return hexTransaction
     }
 
-    public getTxid(): string {
-    
+    public getTxid(): string 
+    {    
         let hexTransaction = this.build()
 
         let hash256 = sha256(hexTransaction, true)
@@ -120,7 +122,7 @@ export class Transaction extends BaseTransaction {
 
         this.outputs.forEach(output => {
             hexTransaction += numberToHexLE(output.amount, 64)
-            const scriptPubKey = this.addressToScriptPubKey(output.address)
+            const scriptPubKey = addressToScriptPubKey(output.address)
             hexTransaction += numberToVarTnt(scriptPubKey.length)
             hexTransaction += bytesToHex(scriptPubKey)
         })
@@ -194,7 +196,7 @@ export class Transaction extends BaseTransaction {
         // hashOutputs
         const outputs = this.outputs.map(output => {
             const amount = numberToHexLE(output.amount, 64) 
-            const scriptPubkey = this.addressToScriptPubKey(output.address)
+            const scriptPubkey = addressToScriptPubKey(output.address)
             const scriptLength = numberToHex(scriptPubkey.length, 8) as string
             return amount+scriptLength+bytesToHex(scriptPubkey)
         }).join("")
@@ -227,50 +229,24 @@ export class Transaction extends BaseTransaction {
         return hexToBytes(result)
     }
 
-    private addressToScriptPubKey(address: string): Uint8Array {
-        if(["1", "m", "n"].includes(address[0])) {
-            // P2PKH Legacy
-            const decoded = hexToBytes(Base58.decode(address))
-            const hash = decoded.slice(1, -4) // remove the prefix and checksum
-            const prefixScript = new Uint8Array([0x76, 0xa9, hash.length])
-            //return mergeUint8Arrays(hexToBytes("76a914"), hash, hexToBytes("88ac"))
-            return mergeUint8Arrays(prefixScript, hash, hexToBytes("88ac"))
-        } else if (["2", "3"].includes(address[0])) {
-            // P2SH Legacy
-            const decoded = hexToBytes(Base58.decode(address))
-            const hash = decoded.slice(1, -4) // remove the prefix and checksum
-            const prefixScript = new Uint8Array([0xa9, hash.length])
-            //return mergeUint8Arrays(hexToBytes("a914"), hash, hexToBytes("87"))
-            return mergeUint8Arrays(prefixScript, hash, hexToBytes("87"))
-        } else if (["tb1", "bc1"].includes(address.substring(0,3))) {
-            // SegWit (P2WPKH, P2WSH)
-            const decoder = new Bech32({ 
-                publicKey: this.pairKey.getPublicKey(), 
-                network: this.network
-            })
-            const hash = decoder.getScriptPubkey(address)
-            if(hash) {
-                const prefixScript = new Uint8Array([0x00, hash.length])
-                return mergeUint8Arrays(prefixScript, hexToBytes(hash))
-            }
-            throw new Error("Invalid bech32 format address")
-        }
-        throw new Error("not supported format address")
-    }
-
     public isSegwit() : boolean {
-        return this.inputs.some(input => { 
-            const bytes = hexToBytes(input.scriptPubKey)
-            return ((bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14) || // P2WPKH
-                (bytes.length === 34 && bytes[0] == 0x00 && bytes[1] == 0x20))       // P2WSH
-        })
+        return this.inputs.some(this.isSegwitInput)
+        //     input => { 
+        //     const bytes = hexToBytes(input.scriptPubKey)
+        //     return ((bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14) || // P2WPKH
+        //         (bytes.length === 34 && bytes[0] == 0x00 && bytes[1] == 0x20))       // P2WSH
+        // })
     }
 
-    private isSegwitInput(index: number) 
+    public Clear() 
     {
-        const input = this.inputs[index]
-        if(!input) throw new Error("Input not found")
+        this.inputs = []
+        this.outputs = []
+        this.version =2
+    }
 
+    private isSegwitInput(input: InputTransaction) 
+    {
         const bytes = hexToBytes(input.scriptPubKey)
     
         return ((bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14) || // P2WPKH

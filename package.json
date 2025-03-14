@@ -45,5 +45,8 @@
     "bugs": {
         "url": "https://github.com/emptioapp/bitcoin-tx-lib/issues"
     },
-    "homepage": "https://github.com/emptioapp/bitcoin-tx-lib#readme"
+    "homepage": "https://github.com/emptioapp/bitcoin-tx-lib#readme",
+    "dependencies": {
+        "bech32": "^2.0.0"
+    }
 }
