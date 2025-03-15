@@ -63,7 +63,7 @@ export class Transaction extends BaseTransaction {
 
             if(this.isSegwitInput(input)) {
                 const scriptSig = this.generateSegWitScriptSig(index, "hex") as string
-                segwitData += "02"+scriptSig
+                segwitData += "00"+scriptSig
                 hexTransaction += "00" // script sig in witness area // P2WPKH 
             } else {
                 const scriptSig = this.generateScriptSig(index, "hex") as string
@@ -155,6 +155,7 @@ export class Transaction extends BaseTransaction {
 
     private generateSegWitScriptSig(sigIndex: number, resultType: "hex"|"bytes") : Hex
     {
+        console.log("witness scriptSig")
         const currentInput = this.inputs[sigIndex]
         if(!currentInput)
             throw new Error("input not found")
@@ -224,6 +225,8 @@ export class Transaction extends BaseTransaction {
 
         const result = scriptSigLength+scriptSig
 
+        console.log("witness scriptSig\n", result)
+
         if(resultType == "hex") return result
 
         return hexToBytes(result)
@@ -231,18 +234,6 @@ export class Transaction extends BaseTransaction {
 
     public isSegwit() : boolean {
         return this.inputs.some(this.isSegwitInput)
-        //     input => { 
-        //     const bytes = hexToBytes(input.scriptPubKey)
-        //     return ((bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14) || // P2WPKH
-        //         (bytes.length === 34 && bytes[0] == 0x00 && bytes[1] == 0x20))       // P2WSH
-        // })
-    }
-
-    public Clear() 
-    {
-        this.inputs = []
-        this.outputs = []
-        this.version =2
     }
 
     private isSegwitInput(input: InputTransaction) 
@@ -251,6 +242,13 @@ export class Transaction extends BaseTransaction {
     
         return ((bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14) || // P2WPKH
             (bytes.length === 34 && bytes[0] == 0x00 && bytes[1] == 0x20))       // P2WSH
+    }
+    
+    public Clear() 
+    {
+        this.inputs = []
+        this.outputs = []
+        this.version = 2
     }
 }
 

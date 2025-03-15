@@ -15,14 +15,14 @@ describe("default transaction tests", () => {
         transaction.addInput({
             txid: "3c70b68362641d536744a0b35568b6e0d7be432d2d5113e646f3e8a64c2322c4",
             scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9",
-            value: 15427, //of 15427 -> 1000 sats to fee
+            value: 15427, 
             vout: 1
         })
 
         transaction.addInput({
             txid: "157da15b3cdb2561602bd889d578227aa089915e3945c6d26569d27aecb9a4f7",
             scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9",
-            value: 15197, // all sats of this utxo
+            value: 15197, 
             vout: 1
         })
 
