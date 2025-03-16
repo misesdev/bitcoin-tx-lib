@@ -49,6 +49,7 @@ export class Transaction extends BaseTransaction {
     public build(): string 
     {        
         let segwitData: string = ""
+        let segwitCount: number = 0
         
         let hexTransaction = String(numberToHexLE(this.version, 32)) // version
 
@@ -62,9 +63,9 @@ export class Transaction extends BaseTransaction {
             hexTransaction += numberToHexLE(input.vout, 32) // index output (vout)
 
             if(this.isSegwitInput(input)) {
-                const scriptSig = this.generateSegWitScriptSig(index, "hex") as string
-                segwitData += "00"+scriptSig
+                segwitData += this.generateSegWitScriptSig(index, "hex") as string
                 hexTransaction += "00" // script sig in witness area // P2WPKH 
+                segwitCount++
             } else {
                 const scriptSig = this.generateScriptSig(index, "hex") as string
                 hexTransaction += scriptSig
@@ -82,7 +83,7 @@ export class Transaction extends BaseTransaction {
         })
 
         if(this.isSegwit()) {
-            hexTransaction += "00"
+            hexTransaction += numberToHex(segwitCount, 8)
             hexTransaction += segwitData
         }
 
