@@ -1,3 +1,4 @@
+import { Base58 } from "./base/base58";
 import { BaseTransaction } from "./base/txbase";
 import { OP_CODES } from "./constants/opcodes";
 import { ECPairKey } from "./ecpairkey";
@@ -5,6 +6,7 @@ import { BNetwork, Hex } from "./types";
 import { InputTransaction, OutputTransaction } from "./types/transaction"
 import { bytesToHex, getBytesCount, hash160ToScript, hexToBytes, 
     numberToHex, numberToHexLE, numberToVarTnt, reverseEndian, 
+    ripemd160, 
     sha256 } from "./utils";
 import { addressToScriptPubKey } from "./utils/txutils";
 
@@ -15,9 +17,10 @@ interface TXOptions {
 
 export class Transaction extends BaseTransaction {
  
+    private network: BNetwork = "mainnet"
     public inputs: InputTransaction[] = []
     public outputs: OutputTransaction[] =[]
-    private network: BNetwork = "mainnet"
+    private transactionRow?: string = undefined
 
     constructor(pairkey: ECPairKey, options?: TXOptions) 
     {
@@ -32,6 +35,9 @@ export class Transaction extends BaseTransaction {
             throw new Error("Expected txid value")
         else if(!input.scriptPubKey)
             throw new Error("Expected scriptPubKey")
+
+        if(!input.sequence)
+            input.sequence = "ffffffff"
         
         this.inputs.push(input)
     }
@@ -48,53 +54,56 @@ export class Transaction extends BaseTransaction {
 
     public build(): string 
     {        
-        let segwitData: string = ""
-        let segwitCount: number = 0
+        let witnessData: string = ""
+        let witnessCount: number = 0
         
-        let hexTransaction = String(numberToHexLE(this.version, 32)) // version
+        let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
 
         if(this.isSegwit()) // Marker e Flag for SegWit transactions
             hexTransaction += bytesToHex(new Uint8Array([0x00, 0x01])) //"00" + "01";
 
-        hexTransaction += numberToVarTnt(this.inputs.length) // number of inputs
-
+        hexTransaction += String(numberToVarTnt(this.inputs.length, "hex")) // number of inputs
+        
         this.inputs.forEach((input, index) => {
             hexTransaction += reverseEndian(input.txid) // txid
-            hexTransaction += numberToHexLE(input.vout, 32) // index output (vout)
+            hexTransaction += String(numberToHexLE(input.vout, 32, "hex")) // index output (vout)
 
             if(this.isSegwitInput(input)) {
-                segwitData += this.generateSegWitScriptSig(index, "hex") as string
+                witnessData += String(this.generateSegWitScriptSig(input, "hex"))
                 hexTransaction += "00" // script sig in witness area // P2WPKH 
-                segwitCount++
+                witnessCount++
             } else {
-                const scriptSig = this.generateScriptSig(index, "hex") as string
-                hexTransaction += scriptSig
+                let scriptSig = String(this.generateScriptSig(index, "hex"))
+                let scriptSigLength = String(numberToHexLE(getBytesCount(scriptSig), 8, "hex"))
+                hexTransaction += scriptSigLength.concat(scriptSig)
             }
-            hexTransaction += "ffffffff" // 0xffffffff
+            hexTransaction += input.sequence ?? "ffffffff" // 0xffffffff
         })
 
-        hexTransaction += numberToVarTnt(this.outputs.length) // number of outputs
+        hexTransaction += String(numberToVarTnt(this.outputs.length, "hex")) // number of outputs
 
         this.outputs.forEach(output => {
-            hexTransaction += numberToHexLE(output.amount, 64)
-            const scriptPubKey = addressToScriptPubKey(output.address)
-            hexTransaction += numberToVarTnt(scriptPubKey.length)
+            hexTransaction += String(numberToHexLE(output.amount, 64, "hex"))
+            let scriptPubKey = addressToScriptPubKey(output.address)
+            hexTransaction += String(numberToVarTnt(scriptPubKey.length, "hex"))
             hexTransaction += bytesToHex(scriptPubKey)
         })
 
         if(this.isSegwit()) {
-            hexTransaction += numberToHex(segwitCount, 8)
-            hexTransaction += segwitData
+            // hexTransaction += String(numberToHex(witnessCount, 8, "hex"))
+            hexTransaction += witnessData
         }
 
-        hexTransaction += numberToHexLE(this.locktime, 32) // locktime
+        hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
+
+        this.transactionRow = hexTransaction
 
         return hexTransaction
     }
 
     public getTxid(): string 
     {    
-        let hexTransaction = this.build()
+        let hexTransaction = this.transactionRow ?? this.build()
 
         let hash256 = sha256(hexTransaction, true)
 
@@ -103,134 +112,121 @@ export class Transaction extends BaseTransaction {
 
     private generateScriptSig(sigIndex: number, resultType: "hex"|"bytes") : Hex
     { 
-        let hexTransaction = String(numberToHexLE(this.version, 32)) // version
+        let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
 
-        hexTransaction += numberToVarTnt(this.inputs.length) // number of inputs
+        hexTransaction += String(numberToVarTnt(this.inputs.length, "hex")) // number of inputs
 
         this.inputs.forEach((input, index) => {
-            hexTransaction += numberToHexLE(input.vout, 32) // index output (vout)
-            hexTransaction += reverseEndian(input.txid) // txid
+            hexTransaction += String(numberToHexLE(input.vout, 32, "hex")) // index output (vout)
+            hexTransaction += String(reverseEndian(input.txid)) // txid
             if(index === sigIndex) {
-                const scriptLength = hexToBytes(input.scriptPubKey).length
-                hexTransaction += numberToHex(scriptLength, 8)
+                let scriptLength = hexToBytes(input.scriptPubKey).length
+                hexTransaction += String(numberToHex(scriptLength, 8, "hex"))
                 hexTransaction += input.scriptPubKey
             } else
                 hexTransaction += "00" // length 0x00 to sign
-            hexTransaction += "ffffffff" // 0xffffffff
+            hexTransaction += input.sequence ?? "ffffffff" // 0xffffffff
         })
 
-        hexTransaction += numberToVarTnt(this.outputs.length) // number of outputs
+        hexTransaction += String(numberToVarTnt(this.outputs.length, "hex")) // number of outputs
 
         this.outputs.forEach(output => {
-            hexTransaction += numberToHexLE(output.amount, 64)
-            const scriptPubKey = addressToScriptPubKey(output.address)
-            hexTransaction += numberToVarTnt(scriptPubKey.length)
+            hexTransaction += String(numberToHexLE(output.amount, 64, "hex"))
+            let scriptPubKey = addressToScriptPubKey(output.address)
+            hexTransaction += String(numberToVarTnt(scriptPubKey.length, "hex"))
             hexTransaction += bytesToHex(scriptPubKey)
         })
 
-        hexTransaction += String(numberToHexLE(this.locktime, 32)) // locktime
+        hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
 
-        hexTransaction += numberToHexLE(OP_CODES.SIGHASH_ALL, 32)
+        hexTransaction += String(numberToHexLE(OP_CODES.SIGHASH_ALL, 32, "hex"))
 
-        const sigHash = sha256(hexTransaction, true)
+        let sigHash = sha256(hexTransaction, true) // hash256 -> sha256(sha256(content))
 
         // improve this later
         let signature = this.pairKey.signHash(sigHash) as string
 
         // add OP_SIGHASH_ALL
-        signature += numberToHex(OP_CODES.SIGHASH_ALL, 8)
-        const signatureLength = numberToHex(getBytesCount(signature), 8)
+        signature += String(numberToHexLE(OP_CODES.SIGHASH_ALL, 8, "hex"))
+
+        let signatureLength = String(numberToHex(getBytesCount(signature), 8, "hex"))
         
-        const publicKey = this.pairKey.getPublicKey()
-        const publicKeyLength = numberToHex(getBytesCount(publicKey), 8)
+        let publicKey = Base58.decode(this.pairKey.getPublicKeyCompressed())
+        let publicKeyLength = String(numberToHex(getBytesCount(publicKey), 8, "hex"))
         
-        const scriptSig = signatureLength+signature+publicKeyLength+publicKey
-        const scriptSigLength = numberToHex(getBytesCount(scriptSig), 8)
+        let scriptSig = signatureLength.concat(signature, publicKeyLength, publicKey)
 
-        const result = scriptSigLength+scriptSig
+        if(resultType == "hex") return scriptSig
 
-        if(resultType == "hex") return result
-
-        return hexToBytes(result)
+        return hexToBytes(scriptSig)
     }
 
-    private generateSegWitScriptSig(sigIndex: number, resultType: "hex"|"bytes") : Hex
+    private generateSegWitScriptSig(currentInput: InputTransaction, resultType: "hex"|"bytes") : Hex
     {
-        console.log("witness scriptSig")
-        const currentInput = this.inputs[sigIndex]
-        if(!currentInput)
-            throw new Error("input not found")
-
-        let hexTransaction = numberToHexLE(this.version, 32) as string // version
+        let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
 
         // hashPrevious
-        const previous = this.inputs.map(input => {
-            let vout = numberToHexLE(input.vout, 32) as string // index output (vout)
-            let txid = reverseEndian(input.txid) as string // txid
-            return txid+vout
+        let previous = this.inputs.map(input => {
+            let vout = String(numberToHexLE(input.vout, 32, "hex")) // index output (vout)
+            let txid = String(reverseEndian(input.txid)) // txid
+            return txid.concat(vout)
         }).join("")
-        const hashPrevious = sha256(previous, true)
+
+        let hashPrevious = sha256(previous, true)
         hexTransaction += hashPrevious
 
         // hashSequence
-        const sequence = this.inputs.map(() => "ffffffff").join("")
-        const hashSequence = sha256(sequence, true)
+        let sequence = this.inputs.map(input => input.sequence ?? "ffffffff").join("")
+        let hashSequence = sha256(sequence, true)
         hexTransaction += hashSequence
 
         // out point 
-        let txid = reverseEndian(currentInput.txid) as string
-        let vout = numberToHexLE(currentInput.vout, 32) as string
-        hexTransaction += txid
-        hexTransaction += vout
+        hexTransaction = String(reverseEndian(currentInput.txid))
+        hexTransaction = String(numberToHexLE(currentInput.vout, 32, "hex"))
 
         // script code
-        const pubkeyHash = currentInput.scriptPubKey.substring(4)
-        const scriptCode = hash160ToScript(pubkeyHash) as string
-        const scriptLength = numberToHex(getBytesCount(scriptCode), 8)
-        hexTransaction += scriptLength+scriptCode
+        let pubkeyHash = currentInput.scriptPubKey.substring(4)
+        let scriptCode = "1976a914".concat(pubkeyHash, "88ac") 
+        hexTransaction += scriptCode
 
-        // value
-        hexTransaction += numberToHexLE(currentInput.value, 64)
+        // amount
+        hexTransaction += String(numberToHexLE(currentInput.value, 64, "hex"))
 
         // sequence
-        hexTransaction += "ffffffff"
+        hexTransaction += currentInput.sequence ?? "ffffffff"
 
         // hashOutputs
-        const outputs = this.outputs.map(output => {
-            const amount = numberToHexLE(output.amount, 64) 
-            const scriptPubkey = addressToScriptPubKey(output.address)
-            const scriptLength = numberToHex(scriptPubkey.length, 8) as string
-            return amount+scriptLength+bytesToHex(scriptPubkey)
+        let outputs = this.outputs.map(output => {
+            let amount = String(numberToHexLE(output.amount, 64, "hex")) 
+            let scriptPubkey = addressToScriptPubKey(output.address)
+            let scriptLength = String(numberToHex(scriptPubkey.length, 8, "hex"))
+            return amount.concat(scriptLength, bytesToHex(scriptPubkey))
         }).join("")
-        const hashOutputs = sha256(outputs, true)
+        let hashOutputs = sha256(outputs, true)
         hexTransaction += hashOutputs
 
-        hexTransaction += String(numberToHexLE(this.locktime, 32)) // locktime
+        hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
 
-        hexTransaction += numberToHexLE(OP_CODES.SIGHASH_ALL, 32) // sighash
+        hexTransaction += String(numberToHexLE(OP_CODES.SIGHASH_ALL, 32, "hex")) // sighash
 
-        const sigHash = sha256(hexTransaction, true)
+        let sigHash = String(sha256(hexTransaction, true))  // hash256 -> sha256(sha256(content))
 
-        // improve this later
-        let signature = this.pairKey.signHash(sigHash) as string
-
+        let signature = String(this.pairKey.sign(sigHash))
+        console.log("signature", signature)
         // add OP_SIGHASH_ALL
-        signature += numberToHex(OP_CODES.SIGHASH_ALL, 8)
-        const signatureLength = numberToHex(getBytesCount(signature), 8)
+        signature += String(numberToHex(OP_CODES.SIGHASH_ALL, 8, "hex"))
+        let signatureLength = String(numberToHex(getBytesCount(signature), 8, "hex"))
         
-        const publicKey = this.pairKey.getPublicKey()
-        const publicKeyLength = numberToHex(getBytesCount(publicKey), 8)
+        let publicKey = Base58.decode(this.pairKey.getPublicKeyCompressed())
+        let publicKeyLength = String(numberToHex(getBytesCount(publicKey), 8, "hex"))
+
+        let itemCount = String(numberToHex(2, 8, "hex")) // 2 items(signature & pubkey) 0x02
         
-        const scriptSig = signatureLength+signature+publicKeyLength+publicKey
-        const scriptSigLength = numberToHex(getBytesCount(scriptSig), 8)
+        let scriptSig = itemCount.concat(signatureLength, signature, publicKeyLength, publicKey)
 
-        const result = scriptSigLength+scriptSig
+        if(resultType == "hex") return scriptSig
 
-        console.log("witness scriptSig\n", result)
-
-        if(resultType == "hex") return result
-
-        return hexToBytes(result)
+        return hexToBytes(scriptSig)
     }
 
     public isSegwit() : boolean {

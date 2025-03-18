@@ -2,7 +2,8 @@ const Ecc = require('elliptic').ec
 import { Base58 } from "./base/base58";
 import { Bech32 } from "./base/bech32";
 import { BNetwork, ECOptions, Hex } from "./types"
-import { bytesToHex, checksum, hexToBytes, mergeUint8Arrays, ripemd160, sha256 } from "./utils";
+import { bytesToHex, checksum, hexToBytes, ripemd160 } from "./utils";
+import { secp256k1 } from "@noble/curves/secp256k1";
 
 export class ECPairKey {
 
@@ -28,18 +29,25 @@ export class ECPairKey {
     }
 
     public getPublicKeyCompressed(): string {
-        
+
         let publicKey = this.getPublicKey()
 
-        let X = publicKey.substring(2, 66)
-        // let Y = publicKey.substring(66)
-        let prefix = "03" 
-        let coordinate = X
+        let coordinateX = publicKey.substring(2, 66)
+        let coordinateY = publicKey.substring(66)
+
+        const lastByteY = parseInt(coordinateY.slice(-2), 16)
+        const prefix = (lastByteY % 2 === 0) ? "02" : "03"
 
         // The prefix byte 0x02 is due to the fact that the key refers to the X coordinate of the curve
-        let publicKeyCompressed =  prefix + coordinate 
+        let publicKeyCompressed =  prefix + coordinateX 
 
         return Base58.encode(publicKeyCompressed)
+    }
+
+    public sign(hash: string) {
+        const signature = secp256k1.sign(hash, this.privateKey)
+
+        return signature.toDERHex(true) // compressed=true
     }
 
     public signHash(messageHash: Hex): Hex {
@@ -47,14 +55,14 @@ export class ECPairKey {
         let data = messageHash
 
         if(typeof(messageHash) !== "object")
-            data = hexToBytes(messageHash)
+        data = hexToBytes(messageHash)
 
         const keyPair = this.elliptic.keyFromPrivate(this.privateKey)
 
         const signature = keyPair.sign(data)
 
         if(typeof(messageHash) !== "object")
-            return bytesToHex(signature.toDER())
+        return bytesToHex(signature.toDER())
 
         return signature.toDER()
     }
@@ -65,9 +73,9 @@ export class ECPairKey {
         let signature = derSignature
 
         if(typeof(messageHash) !== "string")
-            message = bytesToHex(messageHash)
+        message = bytesToHex(messageHash)
         if(typeof(derSignature) !== "string")
-            signature = bytesToHex(derSignature)
+        signature = bytesToHex(derSignature)
 
 
         const keyPair = this.elliptic.keyFromPrivate(this.privateKey)
@@ -81,7 +89,7 @@ export class ECPairKey {
 
         // the byte 0x80 is prefix for mainnet and 0xef is prefix for testnet
         let prefix = this.network === "mainnet" ? "80" : "ef"
-       
+
         let privateWif = prefix + priv
 
         let check = checksum(privateWif)
@@ -94,7 +102,7 @@ export class ECPairKey {
     public getPublicWif(): string {
 
         let priv = this.privateKey
-       
+
         // 0x80 is prefix for mainnet and 0xef is byte prefix for testnet
         let prefix = this.network == "mainnet" ? "80" : "ef"
 
@@ -111,21 +119,21 @@ export class ECPairKey {
     public getAddress(bech32: boolean = false): string {
 
         let address: string 
-        
+
         if (bech32) {
 
             let pubkey = Base58.decode(this.getPublicKeyCompressed())
-            
+
             let bech32 = new Bech32({ publicKey: pubkey, network: this.network })
 
             address = bech32.getAddress()
         } else {
 
             let publicKey = this.getPublicKey() 
-            
+
             // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
             let prefix = this.network == "mainnet" ? "00" : "6f"
-            
+
             // the last param to ripemd160 -> true -> ripemd160(sha256(publicKey))
             let pubScript = ripemd160(publicKey, true)
 
@@ -150,7 +158,7 @@ export class ECPairKey {
         let wifHex = Base58.decode(wif)
 
         if (!this.verifyWif(wifHex))
-            throw new Error("Wif type is not supported, only private key wif are suported.")
+        throw new Error("Wif type is not supported, only private key wif are suported.")
 
         return new ECPairKey({ privateKey: wifHex.substring(2, wifHex.length - 8), network: options?.network });
     }
@@ -168,7 +176,7 @@ export class ECPairKey {
         if (!this.wifPrefixes.includes(prefix)) return false
 
         let checksumBytes = bytes.slice(bytes.length - 4, bytes.length) //wifHex.substring(wifHex.length - 8)
-        
+
         let checksumHash = checksum(bytes.slice(0, bytes.length - 4))//wifHex.substring(0, wifHex.length - 8)
 
         //checksumHash = checksum(checksumHash)

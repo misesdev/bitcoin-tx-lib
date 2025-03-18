@@ -6,7 +6,7 @@ import { Base58 } from "./base58"
 
 export class BaseTransaction {
 
-    public version: number = 2
+    public version: number = 2 
     public locktime: number = 0
     public pairKey: ECPairKey
     

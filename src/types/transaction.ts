@@ -3,6 +3,7 @@ export interface InputTransaction {
     txid: string;
     vout: number;
     scriptPubKey: string;
+    sequence?: string;
     value: number;
 }
 

@@ -47,6 +47,7 @@
     },
     "homepage": "https://github.com/emptioapp/bitcoin-tx-lib#readme",
     "dependencies": {
+        "@noble/curves": "^1.8.1",
         "bech32": "^2.0.0"
     }
 }
