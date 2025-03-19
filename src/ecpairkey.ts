@@ -2,7 +2,7 @@ const Ecc = require('elliptic').ec
 import { Base58 } from "./base/base58";
 import { Bech32 } from "./base/bech32";
 import { BNetwork, ECOptions, Hex } from "./types"
-import { bytesToHex, checksum, hexToBytes, ripemd160 } from "./utils";
+import { bytesToHex, checksum, getBytesCount, hexToBytes, ripemd160 } from "./utils";
 import { secp256k1 } from "@noble/curves/secp256k1";
 
 export class ECPairKey {
@@ -28,7 +28,7 @@ export class ECPairKey {
         return pubPoint.encode("hex")
     }
 
-    public getPublicKeyCompressed(): string {
+    public getPublicKeyCompressed(row: boolean = false): string {
 
         let publicKey = this.getPublicKey()
 
@@ -41,30 +41,20 @@ export class ECPairKey {
         // The prefix byte 0x02 is due to the fact that the key refers to the X coordinate of the curve
         let publicKeyCompressed =  prefix + coordinateX 
 
+        if(row) return publicKeyCompressed
+
         return Base58.encode(publicKeyCompressed)
     }
 
-    public sign(hash: string) {
-        const signature = secp256k1.sign(hash, this.privateKey)
-
-        return signature.toDERHex(true) // compressed=true
-    }
-
-    public signHash(messageHash: Hex): Hex {
-
+    public signDER(messageHash: Hex) : Hex {
+        
         let data = messageHash
 
-        if(typeof(messageHash) !== "object")
-        data = hexToBytes(messageHash)
+        if(typeof(messageHash) !== "object") data = hexToBytes(messageHash)
+        
+        const signature = secp256k1.sign(data, this.privateKey, { lowS: true })
 
-        const keyPair = this.elliptic.keyFromPrivate(this.privateKey)
-
-        const signature = keyPair.sign(data)
-
-        if(typeof(messageHash) !== "object")
-        return bytesToHex(signature.toDER())
-
-        return signature.toDER()
+        return signature.toDERHex(true) // compressed=true
     }
 
     public verifySignature(messageHash: Hex, derSignature: Hex): boolean {
@@ -73,14 +63,11 @@ export class ECPairKey {
         let signature = derSignature
 
         if(typeof(messageHash) !== "string")
-        message = bytesToHex(messageHash)
+            message = bytesToHex(messageHash)
         if(typeof(derSignature) !== "string")
-        signature = bytesToHex(derSignature)
+            signature = bytesToHex(derSignature)
 
-
-        const keyPair = this.elliptic.keyFromPrivate(this.privateKey)
-
-        return keyPair.verify(message, signature)
+        return secp256k1.verify(signature, message, this.getPublicKeyCompressed(true))
     }
 
     public getWif(): string {

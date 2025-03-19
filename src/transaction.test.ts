@@ -7,7 +7,7 @@ describe("default transaction tests", () => {
         network: "testnet",
     })
 
-    const transaction = new Transaction(pairkey, { network: "testnet" })
+    const transaction = new Transaction(pairkey)
     
     test("segwit transaction P2PWKH", () => {
         

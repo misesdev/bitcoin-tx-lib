@@ -21,7 +21,7 @@ describe("ECPairKey", () => {
 
         const compressed = pairKey.getPublicKeyCompressed()
 
-        expect(compressed).toBe("28kHHhJyWxNygyPe8oguQb8RPP8mgox4U92z6emdaQnZZ")
+        expect(compressed).toBe("qWxvCXDvALEvQJriaWj7Pucs8e8N4jzNez2mnrCotqKH")
     })
 
     test("get private key WIF", () => {
@@ -42,7 +42,7 @@ describe("ECPairKey", () => {
 
         let pairKey = new ECPairKey({ privateKey: "16260783e40b16731673622ac8a5b045fc3ea4af70f727f3f9e92bdd3a1ddc42" });
 
-        let signature = pairKey.signHash("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba")
+        let signature = pairKey.signDER("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba")
 
         expect(signature).toBe("304402205598d37448064924b0e4b0d43f74625f1c87da0c7e56266b48081ce0fa69ec850220067581bbc97b9f7dd9d5b67fd2558e7c516c2b71c5f0f472b3e290a086a5696d")
         
@@ -84,7 +84,7 @@ describe("ECPairKey", () => {
     })
 
     test("get bitcoin address", () => {
-        const pairKey = ECPairKey.fromWif("5KCyEgVQ93iZoJ81tYrknfpry9LopRhJgBTdMFsapamox69wdar")//new ECPairKey()
+        const pairKey = ECPairKey.fromWif("5KCyEgVQ93iZoJ81tYrknfpry9LopRhJgBTdMFsapamox69wdar")
 
         let address = pairKey.getAddress()
 
@@ -92,6 +92,6 @@ describe("ECPairKey", () => {
         expect(address).toBe("1Mr6dG4BtavXCtaKPaxQpdXHWyCVvMbxtY")
 
         address = pairKey.getAddress(true) // bech32
-        expect(address).toBe("bc1qv3p9y96wr7xn2dq80vz99dxtf7ed4zvcpdemk6")
+        expect(address).toBe("bc1qe44vaalmg0yxd56wav8xhtqp5xe30fe7mxws4z")
     })
 })

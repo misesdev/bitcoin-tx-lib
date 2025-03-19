@@ -1,10 +1,9 @@
-import { Base58 } from "./base/base58";
 import { BaseTransaction } from "./base/txbase";
 import { OP_CODES } from "./constants/opcodes";
 import { ECPairKey } from "./ecpairkey";
-import { BNetwork, Hex } from "./types";
+import { Hex } from "./types";
 import { InputTransaction, OutputTransaction } from "./types/transaction"
-import { bytesToHex, getBytesCount, hash160ToScript, hexToBytes, 
+import { bytesToHex, getBytesCount, hexToBytes, 
     numberToHex, numberToHexLE, numberToVarTnt, reverseEndian, 
     ripemd160, 
     sha256 } from "./utils";
@@ -12,12 +11,10 @@ import { addressToScriptPubKey } from "./utils/txutils";
 
 interface TXOptions {
     version?: number;
-    network: BNetwork;
 }
 
 export class Transaction extends BaseTransaction {
  
-    private network: BNetwork = "mainnet"
     public inputs: InputTransaction[] = []
     public outputs: OutputTransaction[] =[]
     private transactionRow?: string = undefined
@@ -26,7 +23,6 @@ export class Transaction extends BaseTransaction {
     {
         super(pairkey)
         this.version = options?.version ?? 2
-        this.network = options?.network ?? "mainnet"
     }
 
     public addInput(input: InputTransaction) 
@@ -90,7 +86,7 @@ export class Transaction extends BaseTransaction {
         })
 
         if(this.isSegwit()) {
-            // hexTransaction += String(numberToHex(witnessCount, 8, "hex"))
+            //hexTransaction += String(numberToHex(witnessCount, 8, "hex"))
             hexTransaction += witnessData
         }
 
@@ -141,17 +137,17 @@ export class Transaction extends BaseTransaction {
 
         hexTransaction += String(numberToHexLE(OP_CODES.SIGHASH_ALL, 32, "hex"))
 
-        let sigHash = sha256(hexTransaction, true) // hash256 -> sha256(sha256(content))
+        let sigHash = String(sha256(hexTransaction, true)) // hash256 -> sha256(sha256(content))
 
         // improve this later
-        let signature = this.pairKey.signHash(sigHash) as string
+        let signature = String(this.pairKey.signDER(sigHash)) 
 
         // add OP_SIGHASH_ALL
         signature += String(numberToHexLE(OP_CODES.SIGHASH_ALL, 8, "hex"))
 
         let signatureLength = String(numberToHex(getBytesCount(signature), 8, "hex"))
         
-        let publicKey = Base58.decode(this.pairKey.getPublicKeyCompressed())
+        let publicKey = this.pairKey.getPublicKeyCompressed(true)
         let publicKeyLength = String(numberToHex(getBytesCount(publicKey), 8, "hex"))
         
         let scriptSig = signatureLength.concat(signature, publicKeyLength, publicKey)
@@ -163,6 +159,7 @@ export class Transaction extends BaseTransaction {
 
     private generateSegWitScriptSig(currentInput: InputTransaction, resultType: "hex"|"bytes") : Hex
     {
+        let publicKey = this.pairKey.getPublicKeyCompressed(true)
         let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
 
         // hashPrevious
@@ -211,13 +208,11 @@ export class Transaction extends BaseTransaction {
 
         let sigHash = String(sha256(hexTransaction, true))  // hash256 -> sha256(sha256(content))
 
-        let signature = String(this.pairKey.sign(sigHash))
-        console.log("signature", signature)
+        let signature = String(this.pairKey.signDER(sigHash))
         // add OP_SIGHASH_ALL
         signature += String(numberToHex(OP_CODES.SIGHASH_ALL, 8, "hex"))
         let signatureLength = String(numberToHex(getBytesCount(signature), 8, "hex"))
         
-        let publicKey = Base58.decode(this.pairKey.getPublicKeyCompressed())
         let publicKeyLength = String(numberToHex(getBytesCount(publicKey), 8, "hex"))
 
         let itemCount = String(numberToHex(2, 8, "hex")) // 2 items(signature & pubkey) 0x02
