@@ -1,31 +1,59 @@
 import { bech32 } from "bech32"
-import { hexToBytes, mergeUint8Arrays } from "."
+import { bytesToHex, hexToBytes, mergeUint8Arrays, ripemd160 } from "."
 import { Base58 } from "../base/base58"
+import { OP_CODES } from "../constants/opcodes"
 
 export function addressToScriptPubKey(address: string): Uint8Array {
     if(["1", "m", "n"].includes(address[0])) {
         // P2PKH Legacy
         const decoded = hexToBytes(Base58.decode(address))
         const hash = decoded.slice(1, -4) // remove the prefix and checksum
-        const prefixScript = new Uint8Array([0x76, 0xa9, hash.length])
-        //return mergeUint8Arrays(hexToBytes("76a914"), hash, hexToBytes("88ac"))
-        return mergeUint8Arrays(prefixScript, hash, hexToBytes("88ac"))
+        const prefixScript = new Uint8Array([OP_CODES.OP_DUP, OP_CODES.OP_HASH160, hash.length])
+        const sufixScript = new Uint8Array([OP_CODES.OP_EQUALVERIFY, OP_CODES.OP_CHECKSIG])
+        return mergeUint8Arrays(prefixScript, hash, sufixScript)
     } else if (["2", "3"].includes(address[0])) {
         // P2SH Legacy
         const decoded = hexToBytes(Base58.decode(address))
         const hash = decoded.slice(1, -4) // remove the prefix and checksum
-        const prefixScript = new Uint8Array([0xa9, hash.length])
-        //return mergeUint8Arrays(hexToBytes("a914"), hash, hexToBytes("87"))
-        return mergeUint8Arrays(prefixScript, hash, hexToBytes("87"))
+        const prefixScript = new Uint8Array([OP_CODES.OP_HASH160, hash.length])
+        const sufixScript = new Uint8Array([OP_CODES.OP_EQUAL])
+        return mergeUint8Arrays(prefixScript, hash, sufixScript)
     } else if (["tb1", "bc1"].includes(address.substring(0,3))) {
         // SegWit (P2WPKH, P2WSH)
         const data = bech32.decode(address)
         const hash = new Uint8Array(bech32.fromWords(data.words.slice(1)))
         if(hash) {
-            const prefixScript = new Uint8Array([0x00, hash.length])
+            const prefixScript = new Uint8Array([OP_CODES.OP_0, hash.length])
             return mergeUint8Arrays(prefixScript, hash)
         }
         throw new Error("Invalid bech32 format address")
     }
     throw new Error("not supported format address")
 }
+
+export function pubkeyToScriptCode(pubkey: string) {
+    const hash = ripemd160(hexToBytes(pubkey), true) as Uint8Array
+    
+    const prefixScript = new Uint8Array([OP_CODES.OP_DUP, OP_CODES.OP_HASH160, hash.length])
+    const sufixScript = new Uint8Array([OP_CODES.OP_EQUALVERIFY, OP_CODES.OP_CHECKSIG])
+
+    const script = mergeUint8Arrays(prefixScript, hash, sufixScript)
+    const scriptLength = new Uint8Array([script.length])
+
+    return bytesToHex(mergeUint8Arrays(scriptLength, script))
+}
+
+export function scriptPubkeyToScriptCode(script: string) : string {
+    const scriptPubkey = hexToBytes(script)
+
+    if(scriptPubkey[0] == 0x00 && scriptPubkey[1] == 0x14) {
+        const hash = scriptPubkey.slice(2)
+        const prefixScript = new Uint8Array([OP_CODES.OP_DUP, OP_CODES.OP_HASH160, hash.length])
+        const sufixScript = new Uint8Array([OP_CODES.OP_EQUALVERIFY, OP_CODES.OP_CHECKSIG])
+        const scriptCode = mergeUint8Arrays(prefixScript, hash, sufixScript)
+        return bytesToHex(mergeUint8Arrays(new Uint8Array([scriptCode.length]), scriptCode))
+    }
+
+    throw new Error("scriptPubkey no segwit, expected P2WPKH")
+}
+

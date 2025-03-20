@@ -3,6 +3,7 @@ import {
     checksum, 
     getBytesCount, 
     hash160ToScript, 
+    hash256, 
     hexToBytes, 
     isEqual, 
     mergeUint8Arrays, 
@@ -193,5 +194,12 @@ describe("utils", () => {
         result = getBytesCount("ffffffff")
 
         expect(4).toBe(result)
+    })
+
+    test("hash256 sha256(sha256(content))", () => {
+
+        const hash = hash256("ffff")
+
+        expect("fb8d65a41e2f8c97a133f779f5df09b6c5d4ced416f378ef99eea3d86d2b2dfd").toBe(hash)
     })
 }) 

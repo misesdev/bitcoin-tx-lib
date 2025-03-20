@@ -3,7 +3,7 @@ import { ripemd160 as ripemd160Noble } from "@noble/hashes/ripemd160"
 import { sha256 as sha256Noble } from "@noble/hashes/sha256"
 import { Hex } from "../types"
 
-type Response = "hex" | "bytes"
+export type Response = "hex" | "bytes"
 
 export function bytesToHex(bytes: Hex): string {
 
@@ -60,6 +60,20 @@ export function sha256(messageHash: Hex, hash256: boolean = false): Hex {
         hash = sha256Noble(hash)
 
     if(typeof(messageHash) == "string")
+        return bytesToHex(hash)
+
+    return hash
+}
+
+export function hash256(message: Hex) : Hex {
+    let data = message
+    
+    if(typeof(message) !== "object")
+        data = hexToBytes(message)
+
+    const hash = sha256Noble(sha256Noble(data))
+
+    if(typeof(message) == "string")
         return bytesToHex(hash)
 
     return hash

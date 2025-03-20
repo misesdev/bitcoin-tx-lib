@@ -1,5 +1,5 @@
-import { addressToScriptPubKey } from "./txutils";
-import { bytesToHex, hexToBytes } from "./index"; // Assumindo que você tenha essa função utilitária
+import { addressToScriptPubKey, pubkeyToScriptCode, scriptPubkeyToScriptCode } from "./txutils";
+import { bytesToHex } from "./index"; // Assumindo que você tenha essa função utilitária
 
 describe("addressToScriptPubKey", () => {
 
@@ -31,8 +31,22 @@ describe("addressToScriptPubKey", () => {
         expect(result).toEqual(expectedScript)
     });
 
-    test("Retorna erro para endereço inválido", () => {
+    test("return error invalid address", () => {
         const invalidAddress = "abc123";
         expect(() => addressToScriptPubKey(invalidAddress)).toThrow("not supported format address");
     });
+
+    test("convert pubkey to scriptCode", () => {
+        const publicKey = "0333b81ed541c4beee28783890c013f1e5dd4eb38f60b78a4d30b5cad26996217f"
+
+        const scriptCode = pubkeyToScriptCode(publicKey)
+
+        expect("1976a914a8439c50793b033df810de257b313144a8f7edc988ac").toBe(scriptCode)
+    })
+
+    test("convert scriptPubkey to scriptCode to signature", () => {
+        const result = scriptPubkeyToScriptCode("0014a8439c50793b033df810de257b313144a8f7edc9")
+
+        expect(result).toBe("1976a914a8439c50793b033df810de257b313144a8f7edc988ac")
+    })
 });

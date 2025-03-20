@@ -25,7 +25,7 @@ export class BaseTransaction {
         let hash256 = sha256(data, true)
 
         // generate the signature from hash256 of transaction hex
-        let signature = this.pairKey.signHash(hash256)
+        let signature = this.pairKey.signDER(hash256)
 
         // append the SIGHASH = ~01
         signature += SIGHASH_ALL

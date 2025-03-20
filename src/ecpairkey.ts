@@ -2,7 +2,7 @@ const Ecc = require('elliptic').ec
 import { Base58 } from "./base/base58";
 import { Bech32 } from "./base/bech32";
 import { BNetwork, ECOptions, Hex } from "./types"
-import { bytesToHex, checksum, getBytesCount, hexToBytes, ripemd160 } from "./utils";
+import { bytesToHex, checksum, hexToBytes, ripemd160 } from "./utils";
 import { secp256k1 } from "@noble/curves/secp256k1";
 
 export class ECPairKey {
@@ -28,7 +28,7 @@ export class ECPairKey {
         return pubPoint.encode("hex")
     }
 
-    public getPublicKeyCompressed(row: boolean = false): string {
+    public getPublicKeyCompressed(type: "hex"|"base58" = "base58"): string {
 
         let publicKey = this.getPublicKey()
 
@@ -41,7 +41,7 @@ export class ECPairKey {
         // The prefix byte 0x02 is due to the fact that the key refers to the X coordinate of the curve
         let publicKeyCompressed =  prefix + coordinateX 
 
-        if(row) return publicKeyCompressed
+        if(type == "hex") return publicKeyCompressed
 
         return Base58.encode(publicKeyCompressed)
     }
@@ -52,7 +52,9 @@ export class ECPairKey {
 
         if(typeof(messageHash) !== "object") data = hexToBytes(messageHash)
         
-        const signature = secp256k1.sign(data, this.privateKey, { lowS: true })
+        let signature = secp256k1.sign(data, this.privateKey, { lowS: true, extraEntropy: true })
+
+        if(signature.hasHighS()) signature.normalizeS()
 
         return signature.toDERHex(true) // compressed=true
     }
@@ -67,7 +69,7 @@ export class ECPairKey {
         if(typeof(derSignature) !== "string")
             signature = bytesToHex(derSignature)
 
-        return secp256k1.verify(signature, message, this.getPublicKeyCompressed(true))
+        return secp256k1.verify(signature, message, this.getPublicKeyCompressed("hex"))
     }
 
     public getWif(): string {
