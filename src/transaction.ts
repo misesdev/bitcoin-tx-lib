@@ -77,12 +77,7 @@ export class Transaction extends BaseTransaction {
 
         hexTransaction += String(numberToVarTnt(this.outputs.length, "hex")) // number of outputs
 
-        this.outputs.forEach(output => {
-            hexTransaction += String(numberToHexLE(output.amount, 64, "hex"))
-            let scriptPubKey = addressToScriptPubKey(output.address)
-            hexTransaction += String(numberToVarTnt(scriptPubKey.length, "hex"))
-            hexTransaction += bytesToHex(scriptPubKey)
-        })
+        hexTransaction += this.outputsRaw() // amount+scriptpubkey
 
         if(this.isSegwit()) hexTransaction += witnessData
 
@@ -91,6 +86,16 @@ export class Transaction extends BaseTransaction {
         this.raw = hexTransaction
 
         return hexTransaction
+    }
+
+    public outputsRaw() : string {
+        return this.outputs.map(output => {
+            let txoutput = String(numberToHexLE(output.amount, 64, "hex"))
+            let scriptPubKey = addressToScriptPubKey(output.address)
+            txoutput += String(numberToVarTnt(scriptPubKey.length, "hex"))
+            txoutput += bytesToHex(scriptPubKey)
+            return txoutput
+        }).join("")
     }
 
     public getTxid(): string 
@@ -122,12 +127,7 @@ export class Transaction extends BaseTransaction {
 
         hexTransaction += String(numberToVarTnt(this.outputs.length, "hex")) // number of outputs
 
-        this.outputs.forEach(output => {
-            hexTransaction += String(numberToHexLE(output.amount, 64, "hex"))
-            let scriptPubKey = addressToScriptPubKey(output.address)
-            hexTransaction += String(numberToVarTnt(scriptPubKey.length, "hex"))
-            hexTransaction += bytesToHex(scriptPubKey)
-        })
+        hexTransaction += this.outputsRaw()
 
         hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
 
@@ -135,15 +135,13 @@ export class Transaction extends BaseTransaction {
 
         let sigHash = String(hash256(hexTransaction)) // hash256 -> sha256(sha256(content))
 
-        // improve this later
         let signature = String(this.pairKey.signDER(sigHash)) 
 
-        // add OP_SIGHASH_ALL
         signature += String(numberToHexLE(OP_CODES.SIGHASH_ALL, 8, "hex"))
 
         let signatureLength = String(numberToHex(getBytesCount(signature), 8, "hex"))
         
-        let publicKey = this.pairKey.getPublicKeyCompressed("hex")
+        let publicKey = this.pairKey.getPublicKey()
         let publicKeyLength = String(numberToHex(getBytesCount(publicKey), 8, "hex"))
         
         let scriptSig = signatureLength.concat(signature, publicKeyLength, publicKey)
@@ -169,8 +167,8 @@ export class Transaction extends BaseTransaction {
         let hashSequence = hash256(sequence)
         hexTransaction += hashSequence
         // out point 
-        hexTransaction = String(reverseEndian(input.txid))
-        hexTransaction = String(numberToHexLE(input.vout, 32, "hex"))
+        hexTransaction += String(reverseEndian(input.txid))
+        hexTransaction += String(numberToHexLE(input.vout, 32, "hex"))
         // script code
         let scriptCode = scriptPubkeyToScriptCode(input.scriptPubKey)
         hexTransaction += scriptCode
@@ -179,13 +177,7 @@ export class Transaction extends BaseTransaction {
         // sequence
         hexTransaction += input.sequence ?? "ffffffff"
         // hashOutputs
-        let outputs = this.outputs.map(output => {
-            let amount = String(numberToHexLE(output.amount, 64, "hex")) 
-            let scriptPubkey = addressToScriptPubKey(output.address)
-            let scriptLength = String(numberToVarTnt(scriptPubkey.length, "hex"))
-            return amount.concat(scriptLength, bytesToHex(scriptPubkey))
-        }).join("")
-        let hashOutputs = hash256(outputs)
+        let hashOutputs = hash256(this.outputsRaw())
         hexTransaction += hashOutputs
 
         hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime

@@ -5,6 +5,8 @@ import { BNetwork, ECOptions, Hex } from "./types"
 import { bytesToHex, checksum, hexToBytes, numberToHex, ripemd160 } from "./utils";
 import { secp256k1 } from "@noble/curves/secp256k1";
 
+export type TypeAddress = "p2pkh" | "p2wpkh"
+
 export class ECPairKey {
 
     public privateKey: string;
@@ -104,11 +106,11 @@ export class ECPairKey {
         return Base58.encode(wif)
     }
 
-    public getAddress(bech32: boolean = false): string {
+    public getAddress(type: TypeAddress = "p2wpkh"): string {
 
         let address: string 
 
-        if (bech32) {
+        if (type === "p2wpkh") {
 
             let pubkey = Base58.decode(this.getPublicKeyCompressed())
 

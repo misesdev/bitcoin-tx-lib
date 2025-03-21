@@ -53,7 +53,14 @@ export function scriptPubkeyToScriptCode(script: string) : string {
         const scriptCode = mergeUint8Arrays(prefixScript, hash, sufixScript)
         return bytesToHex(mergeUint8Arrays(new Uint8Array([scriptCode.length]), scriptCode))
     }
-
+    if(scriptPubkey[0] == 0x79 && scriptPubkey[2] == 0x14) {
+        return bytesToHex(mergeUint8Arrays(new Uint8Array([scriptPubkey.length]), scriptPubkey))
+    }
+        
     throw new Error("scriptPubkey no segwit, expected P2WPKH")
 }
+
+// export function scroptPubkeyValidation(script: string) : string {
+
+// }
 

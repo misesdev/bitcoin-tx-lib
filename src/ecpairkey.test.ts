@@ -76,7 +76,7 @@ describe("ECPairKey", () => {
             network: "testnet" 
         })
         
-        const address = pairKey.getAddress(true)
+        const address = pairKey.getAddress("p2wpkh")
 
         expect(address).toBe("tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj")
     })
@@ -84,12 +84,12 @@ describe("ECPairKey", () => {
     test("get bitcoin address", () => {
         const pairKey = ECPairKey.fromWif("5KCyEgVQ93iZoJ81tYrknfpry9LopRhJgBTdMFsapamox69wdar")
 
-        let address = pairKey.getAddress()
+        let address = pairKey.getAddress("p2pkh")
 
         expect(address).toBeDefined()
         expect(address).toBe("1Mr6dG4BtavXCtaKPaxQpdXHWyCVvMbxtY")
 
-        address = pairKey.getAddress(true) // bech32
+        address = pairKey.getAddress("p2wpkh") // bech32
         expect(address).toBe("bc1qe44vaalmg0yxd56wav8xhtqp5xe30fe7mxws4z")
     })
 })

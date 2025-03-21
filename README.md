@@ -1,6 +1,9 @@
 # bitcoin-tx-lib
 
-A Typescript library for building and signing Bitcoin transactions
+A TypeScript library for building Bitcoin transactions, focused on compatibility 
+across any TypeScript environment, with minimal dependencies and built in pure
+TypeScript. Fully compatible with React, React Native, and any TypeScript projects, 
+with no reliance on native modules.
 
 ## Install 
 
@@ -41,36 +44,46 @@ A Typescript library for building and signing Bitcoin transactions
 
     // get hexadecimal compressed public key elliptic curve 0x02 + X 
     const publicKey: string = pairKey.getPublicKeyCompressed()
+
+    // get address 
+    const address = pairKey.getAddress("p2wpkh")
+    const address = pairKey.getAddress("p2pkh")
 ```
 
 # How to set up a transaction
 
 #### Transaction P2PKH 
 
+**Currently, P2PKH and P2PWKH transaction types are not accepted, 
+even though they are recognized and handled automatically by
+the Transaction class.**
+
 ```typescript
-    import { ECPairKey, P2PKH } from 'bitcoin-tx-lib'
+    import { ECPairKey, Transaction } from 'bitcoin-tx-lib'
 
     var pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ", { network: "testnet" })
 
-    var transaction = new P2PKH(pairKey)
+    var transaction = new Transaction(pairKey)
 
     transaction.version = 1 // This line is optional, this is the default value
     transaction.locktime = 0 // This line is optional, this is the default value
 
     transaction.addInput({
-        scriptPubkey: "76a9146bf19e55f94d986b4640c154d86469934191951188ac", 
-        txid: "f34e1c37e736727770fed85d1b129713ef7f300304498c31c833985f487fa2f3",
-        txindex: 0
+        txid: "157da15b3cdb2561602bd889d578227aa089915e3945c6d26569d27aecb9a4f7",
+        scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9",
+        value: 15197, 
+        vout: 1
     })
 
     transaction.addOutput({
-        address: "mhmhRnN58ki9zbRJ63mpNGQXoYvdMXZsXt", // Receiver address
-        value: 25100000 // Amount in sats
+        address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
+        amount: 15197 - 1000 /// fee 1000 sats  
     })
 
+    // If the value has change.
     transaction.addOutput({
         address: pairKey.getAddress(), // Your address to receive your change
-        value: 61900000 // Amount in sats
+        value: 1000 // Amount in sats
     })
 
     var transactionRow = transaction.build() // return transaction row hexadecimal signed
@@ -86,3 +99,8 @@ A Typescript library for building and signing Bitcoin transactions
         txid: 2de56daa25d88f200e81eea36a41d82a2394f50f80f0d72776443a6172e9c55d
    */
 ```
+
+**Warning**: Do not use this library outside a server environment. It is not designed 
+for performance. If performance is one of your requirements, consider using a 
+specialized library. At least for now, this implementation focuses on compatibility 
+across Node.js, React Native, React, etc.

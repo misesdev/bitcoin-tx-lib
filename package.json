@@ -14,7 +14,9 @@
         "build utxos",
         "bitcoin transactions",
         "react native",
-        "react"
+        "react",
+        "p2pkh",
+        "p2wpkh"
     ],
     "author": "https://github.com/emptioapp",
     "license": "MIT",
