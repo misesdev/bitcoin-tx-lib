@@ -2,7 +2,7 @@ const Ecc = require('elliptic').ec
 import { Base58 } from "./base/base58";
 import { Bech32 } from "./base/bech32";
 import { BNetwork, ECOptions, Hex } from "./types"
-import { bytesToHex, checksum, hexToBytes, ripemd160 } from "./utils";
+import { bytesToHex, checksum, hexToBytes, numberToHex, ripemd160 } from "./utils";
 import { secp256k1 } from "@noble/curves/secp256k1";
 
 export class ECPairKey {
@@ -10,7 +10,10 @@ export class ECPairKey {
     public privateKey: string;
     public network: BNetwork = "mainnet"
     public cipherCurve = "secp256k1"
-    static wifPrefixes = new Uint8Array([0x80, 0xef])
+    // the byte 0x80 is prefix for mainnet and 0xef is prefix for testnet
+    static wifPrefixes = { "mainnet": 0x80, "testnet": 0xef }
+    // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
+    public addressPrefix = { "mainnet": 0x00, "testnet": 0x6f }
 
     private elliptic = new Ecc(this.cipherCurve ?? "secp256k1")
 
@@ -51,12 +54,12 @@ export class ECPairKey {
         let data = messageHash
 
         if(typeof(messageHash) !== "object") data = hexToBytes(messageHash)
-        
-        let signature = secp256k1.sign(data, this.privateKey, { lowS: true, extraEntropy: true })
+       
+        let signature = secp256k1.sign(data, this.privateKey, { extraEntropy: true })
 
         if(signature.hasHighS()) signature.normalizeS()
 
-        return signature.toDERHex(true) // compressed=true
+        return signature.toDERHex() // compressed=true
     }
 
     public verifySignature(messageHash: Hex, derSignature: Hex): boolean {
@@ -74,12 +77,10 @@ export class ECPairKey {
 
     public getWif(): string {
 
-        let priv = this.privateKey
-
         // the byte 0x80 is prefix for mainnet and 0xef is prefix for testnet
-        let prefix = this.network === "mainnet" ? "80" : "ef"
+        let prefix = numberToHex(ECPairKey.wifPrefixes[this.network], 8, "hex")
 
-        let privateWif = prefix + priv
+        let privateWif = prefix + this.privateKey
 
         let check = checksum(privateWif)
 
@@ -90,13 +91,11 @@ export class ECPairKey {
 
     public getPublicWif(): string {
 
-        let priv = this.privateKey
-
         // 0x80 is prefix for mainnet and 0xef is byte prefix for testnet
-        let prefix = this.network == "mainnet" ? "80" : "ef"
+        let prefix = numberToHex(ECPairKey.wifPrefixes[this.network], 8, "hex")
 
         // the 0x01 byte added at the end indicates that it is a compressed public key (doc: https://en.bitcoin.it/wiki/Wallet_import_format)
-        let publicWif = prefix + priv + "01"
+        let publicWif = prefix + this.privateKey + "01"
 
         let check = checksum(publicWif)
 
@@ -121,21 +120,16 @@ export class ECPairKey {
             let publicKey = this.getPublicKey() 
 
             // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
-            let prefix = this.network == "mainnet" ? "00" : "6f"
+            let prefix = String(numberToHex(this.addressPrefix[this.network], 8, "hex"))
 
             // the last param to ripemd160 -> true -> ripemd160(sha256(publicKey))
             let pubScript = ripemd160(publicKey, true)
-
-            // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
-            //let prefixAddress = this.network == "mainnet" ? "00" : "6f";
 
             let script = prefix + pubScript //prefixAddress + scriptRipemd160
             // the last param to sha256 -> true -> sha256(sha256(script)).substring(0, 8) - is a checksum(first 4 bytes)
             let checkHash = checksum(script)
 
             let result = script + checkHash
-
-            //address = script + check
 
             address = Base58.encode(result)
         } 
@@ -159,16 +153,13 @@ export class ECPairKey {
     static verifyWif(wifHex: string): boolean {
 
         let bytes = hexToBytes(wifHex)
-        let prefix = bytes[0] //wifHex.substring(0, 2)
 
         // In hex [0x80]
-        if (!this.wifPrefixes.includes(prefix)) return false
+        if (![this.wifPrefixes.mainnet, this.wifPrefixes.testnet].includes(bytes[0])) return false
 
         let checksumBytes = bytes.slice(bytes.length - 4, bytes.length) //wifHex.substring(wifHex.length - 8)
 
         let checksumHash = checksum(bytes.slice(0, bytes.length - 4))//wifHex.substring(0, wifHex.length - 8)
-
-        //checksumHash = checksum(checksumHash)
 
         if (checksumHash.toString() !== checksumBytes.toString()) return false;
 

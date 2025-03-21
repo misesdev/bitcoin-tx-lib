@@ -4,7 +4,7 @@ import { ECPairKey } from "./ecpairkey";
 import { InputTransaction, OutputTransaction } from "./types/transaction"
 import { bytesToHex, getBytesCount, hash256, hexToBytes, numberToHex, numberToHexLE,
     numberToVarTnt, reverseEndian } from "./utils";
-import { addressToScriptPubKey, pubkeyToScriptCode, scriptPubkeyToScriptCode } from "./utils/txutils";
+import { addressToScriptPubKey, scriptPubkeyToScriptCode } from "./utils/txutils";
 import { Hex } from "./types";
 
 interface TXOptions {
@@ -16,7 +16,7 @@ export class Transaction extends BaseTransaction {
  
     public inputs: InputTransaction[] = []
     public outputs: OutputTransaction[] =[]
-    private transactionRow?: string = undefined
+    private raw?: string = undefined
 
     constructor(pairkey: ECPairKey, options?: TXOptions) 
     {
@@ -88,14 +88,14 @@ export class Transaction extends BaseTransaction {
 
         hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
 
-        this.transactionRow = hexTransaction
+        this.raw = hexTransaction
 
         return hexTransaction
     }
 
     public getTxid(): string 
     {    
-        let hexTransaction = this.transactionRow ?? this.build()
+        let hexTransaction = this.raw ?? this.build()
 
         let hash = hash256(hexTransaction)
 
@@ -109,11 +109,11 @@ export class Transaction extends BaseTransaction {
         hexTransaction += String(numberToVarTnt(this.inputs.length, "hex")) // number of inputs
 
         this.inputs.forEach((input, index) => {
-            hexTransaction += String(numberToHexLE(input.vout, 32, "hex")) // index output (vout)
             hexTransaction += String(reverseEndian(input.txid)) // txid
+            hexTransaction += String(numberToHexLE(input.vout, 32, "hex")) // index output (vout)
             if(index === sigIndex) {
                 let scriptLength = hexToBytes(input.scriptPubKey).length
-                hexTransaction += String(numberToHex(scriptLength, 8, "hex"))
+                hexTransaction += String(numberToVarTnt(scriptLength, "hex"))
                 hexTransaction += input.scriptPubKey
             } else
                 hexTransaction += "00" // length 0x00 to sign
@@ -172,7 +172,8 @@ export class Transaction extends BaseTransaction {
         hexTransaction = String(reverseEndian(input.txid))
         hexTransaction = String(numberToHexLE(input.vout, 32, "hex"))
         // script code
-        hexTransaction += scriptPubkeyToScriptCode(input.scriptPubKey)
+        let scriptCode = scriptPubkeyToScriptCode(input.scriptPubKey)
+        hexTransaction += scriptCode
         // amount
         hexTransaction += String(numberToHexLE(input.value, 64, "hex"))
         // sequence
@@ -181,7 +182,7 @@ export class Transaction extends BaseTransaction {
         let outputs = this.outputs.map(output => {
             let amount = String(numberToHexLE(output.amount, 64, "hex")) 
             let scriptPubkey = addressToScriptPubKey(output.address)
-            let scriptLength = String(numberToHex(scriptPubkey.length, 8, "hex"))
+            let scriptLength = String(numberToVarTnt(scriptPubkey.length, "hex"))
             return amount.concat(scriptLength, bytesToHex(scriptPubkey))
         }).join("")
         let hashOutputs = hash256(outputs)
@@ -195,14 +196,12 @@ export class Transaction extends BaseTransaction {
 
         let signature = String(this.pairKey.signDER(sigHash))
 
-        console.log(signature)
-        // add OP_SIGHASH_ALL
         signature += String(numberToHex(OP_CODES.SIGHASH_ALL, 8, "hex"))
         
-        let signatureLength = String(numberToHex(getBytesCount(signature), 8, "hex"))
+        let signatureLength = String(numberToVarTnt(getBytesCount(signature), "hex"))
        
         let publicKey = this.pairKey.getPublicKeyCompressed("hex")
-        let publicKeyLength = String(numberToHex(getBytesCount(publicKey), 8, "hex"))
+        let publicKeyLength = String(numberToVarTnt(getBytesCount(publicKey), "hex"))
 
         let itemCount = String(numberToHex(2, 8, "hex")) // 2 items(signature & pubkey) 0x02
         
