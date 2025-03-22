@@ -1,6 +1,6 @@
 import { BNetwork, TypeAddress } from "../types"
 import { Bech32 } from "../base/bech32"
-import { checksum, getBytesCount, hexToBytes, numberToHex, ripemd160 } from "."
+import { checksum, getBytesCount, numberToHex, ripemd160 } from "."
 import { Base58 } from "../base/base58"
 
 interface PubkeyProps {
