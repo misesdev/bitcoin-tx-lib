@@ -100,3 +100,8 @@ The Transaction class recognizes and processes them automatically.
    */
 ```
 
+**Note**: By default, the transaction is created with Replace-By-Fee enabled to 
+prevent it from getting stuck in the mempool due to very low fees. This allows you 
+to rebuild the same transaction with a higher fee and send it again, overwriting 
+the previous one. To disable Replace-By-Fee, simply set the 
+sequence to 0xffffffff in the input.

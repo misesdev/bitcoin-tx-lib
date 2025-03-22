@@ -1,11 +1,10 @@
 import { BaseTransaction } from "./base/txbase";
 import { OP_CODES } from "./constants/opcodes";
 import { ECPairKey } from "./ecpairkey";
-import { InputTransaction, OutputTransaction } from "./types/transaction"
 import { bytesToHex, getBytesCount, hash256, hexToBytes, numberToHex, numberToHexLE,
     numberToVarTnt, reverseEndian } from "./utils";
 import { addressToScriptPubKey, scriptPubkeyToScriptCode } from "./utils/txutils";
-import { Hex } from "./types";
+import { Hex, InputTransaction } from "./types";
 
 type BuildFormat = "raw" | "txid"
 
@@ -16,10 +15,6 @@ interface TXOptions {
 
 export class Transaction extends BaseTransaction {
 
-    private cachedata: any = {}
-    public inputs: InputTransaction[] = []
-    public outputs: OutputTransaction[] =[]
-
     constructor(pairkey: ECPairKey, options?: TXOptions) 
     {
         super(pairkey)
@@ -27,32 +22,11 @@ export class Transaction extends BaseTransaction {
         this.locktime = options?.locktime ?? 0
     }
 
-    public addInput(input: InputTransaction) 
-    {  
-        if(input.txid.length < 10)
-            throw new Error("Expected txid value")
-        else if(!input.scriptPubKey)
-            throw new Error("Expected scriptPubKey")
-
-        if(!input.sequence)
-            input.sequence = "ffffffff"
-        
-        this.inputs.push(input)
-        this.cachedata = {}
-    }
-
-    public addOutput(output: OutputTransaction) 
-    {
-        if(output.address.length <= 10)
-            throw new Error("Expected address value")
-        if(output.amount <= 0)
-            throw new Error("Expected a valid amount")
-
-        this.outputs.push(output)
-    }
-
     public build(format: BuildFormat = "raw"): string 
-    {       
+    {      
+        if(this.cachedata[format])
+            return this.cachedata[format]
+
         let witnessData: string = ""
         
         let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
@@ -75,7 +49,8 @@ export class Transaction extends BaseTransaction {
                 hexTransaction += scriptSigLength.concat(scriptSig)
                 witnessData += "00" // no witness, only scriptSig
             }
-            hexTransaction += input.sequence ?? "ffffffff" // 0xffffffff
+            // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
+            hexTransaction += input.sequence ?? reverseEndian("fffffffd") // 0xfffffffd
         })
 
         hexTransaction += String(numberToVarTnt(this.outputs.length, "hex")) // number of outputs
@@ -86,6 +61,8 @@ export class Transaction extends BaseTransaction {
 
         hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
 
+        this.cachedata[format] = hexTransaction
+        
         return hexTransaction
     }
 
@@ -101,7 +78,7 @@ export class Transaction extends BaseTransaction {
 
     public getTxid(): string 
     {    
-        let hexTransaction: string = this.build("txid")
+        let hexTransaction = this.cachedata["txid"] ?? this.build("txid")
         
         let hash = String(hash256(hexTransaction))
 
@@ -126,7 +103,8 @@ export class Transaction extends BaseTransaction {
                 hexTransaction += input.scriptPubKey
             } else
                 hexTransaction += "00" // length 0x00 to sign
-            hexTransaction += input.sequence ?? "ffffffff" // 0xffffffff
+            // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
+            hexTransaction += input.sequence ?? reverseEndian("fffffffd") 
         })
 
         hexTransaction += String(numberToVarTnt(this.outputs.length, "hex")) // number of outputs
@@ -157,7 +135,7 @@ export class Transaction extends BaseTransaction {
         return hexToBytes(scriptSig)
     }
 
-    private generateWitness(input: InputTransaction, resultType: "hex"|"bytes") : Hex
+    private generateWitness(input: InputTransaction, resultType: "hex"|"bytes" = "hex") : Hex
     {
         if(this.cachedata[input.txid]) 
             return String(this.cachedata[input.txid])
@@ -172,7 +150,7 @@ export class Transaction extends BaseTransaction {
         let hashPrevouts = hash256(prevouts)
         hexTransaction += hashPrevouts
         // hashSequence
-        let sequence = this.inputs.map(input => input.sequence ?? "ffffffff").join("")
+        let sequence = this.inputs.map(input => input.sequence ?? reverseEndian("fffffffd")).join("")
         let hashSequence = hash256(sequence)
         hexTransaction += hashSequence
         // out point 
@@ -184,7 +162,8 @@ export class Transaction extends BaseTransaction {
         // amount
         hexTransaction += String(numberToHexLE(input.value, 64, "hex"))
         // sequence
-        hexTransaction += input.sequence ?? "ffffffff"
+        // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
+        hexTransaction += input.sequence ?? reverseEndian("fffffffd")
         // hashOutputs
         let hashOutputs = hash256(this.outputsRaw())
         hexTransaction += hashOutputs
@@ -225,6 +204,33 @@ export class Transaction extends BaseTransaction {
     
         return ((bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14) || // P2WPKH
             (bytes.length === 34 && bytes[0] == 0x00 && bytes[1] == 0x20))       // P2WSH
+    }
+    
+    // docs https://learnmeabitcoin.com/technical/transaction/size/
+    public weight() : number {
+	    // witness marker and flag * 1
+        let witnessMK = 0 // 2 bytes of marker and flag 0x00+0x01 = 2 bytes * 1
+       
+        if(this.isSegwit()) witnessMK = 2
+
+        let hexTransaction = this.cachedata["raw"] ?? this.build()
+        
+        let witnessInputs = this.inputs.filter(this.isSegwitInput)
+	    // witness size * 1
+        let witnessSize = witnessInputs.reduce((sum, input) => {
+            let witness = String(this.generateWitness(input))
+            return sum + getBytesCount(witness)
+        }, 0) 
+        // discount the size of the witness fields and multiply by 4
+        let transactionSize = getBytesCount(hexTransaction)
+        transactionSize = (transactionSize - (witnessSize + witnessMK)) * 4 
+        
+        return transactionSize
+    }
+
+    // docs https://learnmeabitcoin.com/technical/transaction/size/
+    public vBytes() {
+       	return this.weight() / 4 
     }
     
     public clear() 

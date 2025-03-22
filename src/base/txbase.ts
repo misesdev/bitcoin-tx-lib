@@ -1,48 +1,42 @@
-import { SIGHASH_ALL } from "../constants/generics"
 import { ECPairKey } from "../ecpairkey"
-import { Hex } from "../types"
-import { bytesToHex, hexToBytes, numberToHex, sha256 } from "../utils"
-import { Base58 } from "./base58"
+import { Hex, InputTransaction, OutputTransaction } from "../types"
 
 export class BaseTransaction {
 
     public version: number = 2 
     public locktime: number = 0
     public pairKey: ECPairKey
+    public cachedata: any = {}
+    public inputs: InputTransaction[] = []
+    public outputs: OutputTransaction[] =[]
     
     constructor(pairKey: ECPairKey) {
         this.pairKey = pairKey
     }
-
-    protected buildSignature(hexTransaction: Hex): Hex {
-
-        let data = hexTransaction
-
-        if(typeof(hexTransaction) !== "string")
-            data = bytesToHex(hexTransaction)
-
-        // generate the hash250 from transaction hex
-        let hash256 = sha256(data, true)
-
-        // generate the signature from hash256 of transaction hex
-        let signature = this.pairKey.signDER(hash256)
-
-        // append the SIGHASH = ~01
-        signature += SIGHASH_ALL
-
-        // append the length of signature + SIGHASH hexadecimal int8bits 1 = 01
-        signature = String(numberToHex(signature.length / 2, 8)) + signature
-
-        let compressedPublicKey = Base58.decode(this.pairKey.getPublicKeyCompressed())
-
-        let compressedPublicKeyLength = String(numberToHex(compressedPublicKey.length / 2, 8)) // hexadecimal int8bits 1 = 01
-
-        let scriptSigned = signature + compressedPublicKeyLength + compressedPublicKey
-
-        if(typeof(hexTransaction) === "object")
-            return hexToBytes(scriptSigned)
     
-        return scriptSigned
+    public addInput(input: InputTransaction) 
+    {  
+        if(input.txid.length < 10)
+            throw new Error("Expected txid value")
+        else if(!input.scriptPubKey)
+            throw new Error("Expected scriptPubKey")
+
+        // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
+        if(!input.sequence)
+            input.sequence = "fffffffd"
+        
+        this.inputs.push(input)
+        this.cachedata = {}
+    }
+
+    public addOutput(output: OutputTransaction) 
+    {
+        if(output.address.length <= 10)
+            throw new Error("Expected address value")
+        if(output.amount <= 0)
+            throw new Error("Expected a valid amount")
+
+        this.outputs.push(output)
     }
 }
 
