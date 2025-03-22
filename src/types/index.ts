@@ -5,7 +5,7 @@ export type BNetwork = "testnet" | "mainnet"
 
 export type BechEncoding = "bech32" | "bech32m"
 
-export type Bech32Options = {
+export interface Bech32Options {
     network?: BNetwork,
     version?: number,
     publicKey: string

@@ -66,16 +66,6 @@ export class Transaction extends BaseTransaction {
         return hexTransaction
     }
 
-    public outputsRaw() : string {
-        return this.outputs.map(output => {
-            let txoutput = String(numberToHexLE(output.amount, 64, "hex"))
-            let scriptPubKey = addressToScriptPubKey(output.address)
-            txoutput += String(numberToVarTnt(scriptPubKey.length, "hex"))
-            txoutput += bytesToHex(scriptPubKey)
-            return txoutput
-        }).join("")
-    }
-
     public getTxid(): string 
     {    
         let hexTransaction = this.cachedata["txid"] ?? this.build("txid")
@@ -237,7 +227,6 @@ export class Transaction extends BaseTransaction {
     {
         this.inputs = []
         this.outputs = []
-        this.version = 2
         this.cachedata = {}
     }
 }

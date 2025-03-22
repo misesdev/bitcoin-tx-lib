@@ -1,5 +1,7 @@
 import { ECPairKey } from "../ecpairkey"
 import { Hex, InputTransaction, OutputTransaction } from "../types"
+import { bytesToHex, numberToHexLE, numberToVarTnt } from "../utils"
+import { addressToScriptPubKey } from "../utils/txutils"
 
 export class BaseTransaction {
 
@@ -37,6 +39,16 @@ export class BaseTransaction {
             throw new Error("Expected a valid amount")
 
         this.outputs.push(output)
+    }
+
+    public outputsRaw() : string {
+        return this.outputs.map(output => {
+            let txoutput = String(numberToHexLE(output.amount, 64, "hex"))
+            let scriptPubKey = addressToScriptPubKey(output.address)
+            txoutput += String(numberToVarTnt(scriptPubKey.length, "hex"))
+            txoutput += bytesToHex(scriptPubKey)
+            return txoutput
+        }).join("")
     }
 }
 
