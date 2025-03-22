@@ -7,16 +7,18 @@ import { bytesToHex, getBytesCount, hash256, hexToBytes, numberToHex, numberToHe
 import { addressToScriptPubKey, scriptPubkeyToScriptCode } from "./utils/txutils";
 import { Hex } from "./types";
 
+type BuildFormat = "raw" | "txid"
+
 interface TXOptions {
     version?: number;
     locktime?: number;
 }
 
 export class Transaction extends BaseTransaction {
- 
+
+    private cachedata: any = {}
     public inputs: InputTransaction[] = []
     public outputs: OutputTransaction[] =[]
-    private raw?: string = undefined
 
     constructor(pairkey: ECPairKey, options?: TXOptions) 
     {
@@ -48,18 +50,18 @@ export class Transaction extends BaseTransaction {
         this.outputs.push(output)
     }
 
-    public build(): string 
-    {        
+    public build(format: BuildFormat = "raw"): string 
+    {       
         let witnessData: string = ""
         
         let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
 
-        if(this.isSegwit()) // Marker and Flag for SegWit transactions
+        if(this.isSegwit() && format != "txid") // Marker and Flag for SegWit transactions
             hexTransaction += bytesToHex(new Uint8Array([0x00, 0x01])) //"00" + "01";
 
         hexTransaction += String(numberToVarTnt(this.inputs.length, "hex")) // number of inputs
         
-        this.inputs.forEach((input, index) => {
+        this.inputs.forEach(input => {
             hexTransaction += reverseEndian(input.txid) // txid
             hexTransaction += String(numberToHexLE(input.vout, 32, "hex")) // index output (vout)
 
@@ -67,7 +69,7 @@ export class Transaction extends BaseTransaction {
                 witnessData += String(this.generateWitness(input, "hex"))
                 hexTransaction += "00" // script sig in witness area // P2WPKH 
             } else {
-                let scriptSig = String(this.generateScriptSig(index, "hex"))
+                let scriptSig = String(this.generateScriptSig(input, "hex"))
                 let scriptSigLength = String(numberToHexLE(getBytesCount(scriptSig), 8, "hex"))
                 hexTransaction += scriptSigLength.concat(scriptSig)
                 witnessData += "00" // no witness, only scriptSig
@@ -79,11 +81,9 @@ export class Transaction extends BaseTransaction {
 
         hexTransaction += this.outputsRaw() // amount+scriptpubkey
 
-        if(this.isSegwit()) hexTransaction += witnessData
+        if(this.isSegwit() && format != "txid") hexTransaction += witnessData
 
         hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
-
-        this.raw = hexTransaction
 
         return hexTransaction
     }
@@ -100,24 +100,26 @@ export class Transaction extends BaseTransaction {
 
     public getTxid(): string 
     {    
-        let hexTransaction = "02000000000102d6986bb800ba475f4de8fd2c9e96061150869ecf9119bc800848e03abb41d0900000000000ffffffff8d9b4613f310ec6f0324ab2dba4494236caacbb2d63a77e54063860b30b8de7f0000000000ffffffff01095e0000000000001976a914b334e6ed7bfc6a782eff6ecfe55c8abc10baaea388ac0247304402207bb407a44f00b2b0cb8e47656f30208c6d016a38284d1a028cfceaca86cd3d4a02201f999fd40aaec0bddc20efe6fae948a15e6e4ba6cf6c2d5cf4c3beb16d8ada4101210333b81ed541c4beee28783890c013f1e5dd4eb38f60b78a4d30b5cad26996217f0247304402206a1ad54a626df76c95a72761013f880d4120250e2cf8e3826cb6a6495dd0125a022012aa53b47113357f03517dc8f2c5f3cbffec357109d8b61be257a090eb6c46cf01210333b81ed541c4beee28783890c013f1e5dd4eb38f60b78a4d30b5cad26996217f00000000"
-        //this.raw ?? this.build()
+        let hexTransaction: string = this.build("txid")
         
         let hash = String(hash256(hexTransaction))
 
         return String(reverseEndian(hash))
     }
 
-    private generateScriptSig(sigIndex: number, resultType: "hex"|"bytes") : Hex
-    { 
+    private generateScriptSig(inputSig: InputTransaction, resultType: "hex"|"bytes") : Hex
+    {
+        if(this.cachedata[inputSig.txid]) 
+            return String(this.cachedata[inputSig.txid])
+
         let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
 
         hexTransaction += String(numberToVarTnt(this.inputs.length, "hex")) // number of inputs
 
-        this.inputs.forEach((input, index) => {
+        this.inputs.forEach(input => {
             hexTransaction += String(reverseEndian(input.txid)) // txid
             hexTransaction += String(numberToHexLE(input.vout, 32, "hex")) // index output (vout)
-            if(index === sigIndex) {
+            if(input.txid === inputSig.txid) {
                 let scriptLength = hexToBytes(input.scriptPubKey).length
                 hexTransaction += String(numberToVarTnt(scriptLength, "hex"))
                 hexTransaction += input.scriptPubKey
@@ -147,13 +149,18 @@ export class Transaction extends BaseTransaction {
         
         let scriptSig = signatureLength.concat(signature, publicKeyLength, publicKey)
 
-        if(resultType == "hex") return scriptSig
+        this.cachedata[inputSig.txid] = scriptSig
 
+        if(resultType == "hex") return scriptSig
+        
         return hexToBytes(scriptSig)
     }
 
     private generateWitness(input: InputTransaction, resultType: "hex"|"bytes") : Hex
     {
+        if(this.cachedata[input.txid]) 
+            return String(this.cachedata[input.txid])
+
         let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
         // hashPrevouts
         let prevouts = this.inputs.map(input => {
@@ -199,6 +206,8 @@ export class Transaction extends BaseTransaction {
         let itemCount = String(numberToHex(2, 8, "hex")) // 2 items(signature & pubkey) 0x02
         
         let scriptSig = itemCount.concat(signatureLength, signature, publicKeyLength, publicKey)
+        
+        this.cachedata[input.txid] = scriptSig
 
         if(resultType == "hex") return scriptSig
 

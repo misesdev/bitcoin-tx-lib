@@ -82,21 +82,22 @@ the Transaction class.**
 
     // If the value has change.
     transaction.addOutput({
-        address: pairKey.getAddress(), // Your address to receive your change
+        address: pairKey.getAddress("p2wpkh"), // Your address to receive your change
         value: 1000 // Amount in sats
     })
 
     var transactionRow = transaction.build() // return transaction row hexadecimal signed
     /*
-        transactionRow: 0100000001f3a27f485f9833c8318c490403307fef1397121b5dd8fe70777236e7371c4ef3000000006b483045022027ebbe9ce8
-        1ddc0333f19fbbce027a0ab0bc7a5ad684a83db85b222dc0ee2de4022100d6842b3a78d7d8184ea8a8a75474779dcb772820fd82ff3040aaa0358601
-        9d5f012102d0de0aaeaefad02b8bdc8a01a1b8b11c696bd3d66a2c5f10780d95b7df42645cffffffff0217efee00000000001976a91418ba14b36822
-        95cb05230e31fecb00089240660888ac3b084e00000000001976a914a65d1a239d4ec666643d350c7bb8fc44d288112888ac00000000
+        transactionRow: 02000000000101c6be2d35cce2b9def60ea1d1923bc6566fc2c8d30fb3d76a843
+        92343855ead6f0100000000ffffffff01d00c000000000000160014aec042df56d9dc2fad0b30faf6
+        2eb94f07cba3cc02483045022100bd4f1ff33aadc704173d31246e45a77cafee0a9534ab1383ce95c
+        e163870783402203fc6d5321dfbdacac0874d1acf48e7a03087daf7690225216491660584e6e8c401
+        210333b81ed541c4beee28783890c013f1e5dd4eb38f60b78a4d30b5cad26996217f00000000
     */
 
    var txid = transaction.getTxid() // Calculate transaction id
    /*
-        txid: 2de56daa25d88f200e81eea36a41d82a2394f50f80f0d72776443a6172e9c55d
+        txid: 7c850c5f558d3ea982f2b1a940f4ec40104841793029302fbcb8958595066eaf
    */
 ```
 

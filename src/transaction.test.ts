@@ -12,27 +12,15 @@ describe("default transaction tests", () => {
     test("segwit transaction P2PWKH", () => {
         
         transaction.addInput({
-            txid: "ba1d6af3cf2e198c5b87afc5531af0aa1f2ca9d6e18f9a5c7a42aec3c5de6de5",
-            scriptPubKey: "76a914b334e6ed7bfc6a782eff6ecfe55c8abc10baaea388ac",
-            value: 24073, 
-            vout: 0
-        })
-
-        // transaction.addInput({
-        //     txid: "7fdeb8300b866340e5773ad6b2cbaa6c239444ba2dab24036fec10f313469b8d",
-        //     scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9",
-        //     value: 21073, 
-        //     vout: 0
-        // })
-
-        transaction.addOutput({
-            address: "1HLZL3AULR5CBJ91NGiRw7cbNU31b4fvtA",
-            amount: (24073) - 23073 
+            txid: "16945364992874171da102f987c217f3ff13bb4817957f6a030169083a8ac8f0",
+            scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9",
+            value: 29128, 
+            vout: 1
         })
 
         transaction.addOutput({
             address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
-            amount: (24073) - 2000 
+            amount: (29128) - 500 
         })
 
         console.log(transaction.build())
@@ -56,6 +44,10 @@ describe("default transaction tests", () => {
         // })
 
         //const row = transaction.build()
+    })
+
+    test("output raw", () => {
+        let raw = transaction.outputsRaw()
     })
 })
 
