@@ -52,7 +52,7 @@ with no reliance on native modules.
 
 # How to set up a transaction
 
-#### Transaction P2PKH 
+#### Transaction 
 
 Currently, only P2PKH and P2WPKH transaction types are accepted.
 The Transaction class recognizes and processes them automatically.
@@ -76,7 +76,7 @@ The Transaction class recognizes and processes them automatically.
 
     transaction.addOutput({
         address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
-        amount: 15197 - 1000 /// fee 1000 sats  
+        amount: 15197 - 2000 /// fee 1000 sats  
     })
 
     // If the value has change.
