@@ -11,7 +11,7 @@ export class Bech32 {
     private chars: string = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
     private generator = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3]
 
-    public constructor(options: Bech32Options) {
+    public constructor(options: Bech32Options = {}) {
         if (options?.network)
             this.network = options.network
         if (options?.version) {
@@ -19,7 +19,7 @@ export class Bech32 {
             this.encoding = options.version > 0 ? "bech32m" : "bech32"
         }
 
-        this.publicKey = options.publicKey
+        this.publicKey = options.publicKey ?? ""
     }
 
     // convert a ripemd160 hexadecimal in a bech32 hexadecimal 32 bytes

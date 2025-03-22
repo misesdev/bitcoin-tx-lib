@@ -5,10 +5,12 @@ export type BNetwork = "testnet" | "mainnet"
 
 export type BechEncoding = "bech32" | "bech32m"
 
+export type TypeAddress = "p2pkh" | "p2wpkh"
+
 export interface Bech32Options {
     network?: BNetwork,
     version?: number,
-    publicKey: string
+    publicKey?: string
 }
 
 export interface ECOptions {

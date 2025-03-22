@@ -2,6 +2,7 @@ import { bech32 } from "bech32"
 import { bytesToHex, hexToBytes, mergeUint8Arrays, ripemd160 } from "."
 import { Base58 } from "../base/base58"
 import { OP_CODES } from "../constants/opcodes"
+import { Bech32 } from "../base/bech32"
 
 export function addressToScriptPubKey(address: string): Uint8Array {
     if(["1", "m", "n"].includes(address[0])) {

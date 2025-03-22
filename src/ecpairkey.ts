@@ -1,11 +1,10 @@
 const Ecc = require('elliptic').ec
 import { Base58 } from "./base/base58";
 import { Bech32 } from "./base/bech32";
-import { BNetwork, ECOptions, Hex } from "./types"
+import { BNetwork, ECOptions, Hex, TypeAddress } from "./types"
 import { bytesToHex, checksum, hexToBytes, numberToHex, ripemd160 } from "./utils";
 import { secp256k1 } from "@noble/curves/secp256k1";
-
-export type TypeAddress = "p2pkh" | "p2wpkh"
+import { Address } from "./utils/address";
 
 export class ECPairKey {
 
@@ -108,34 +107,9 @@ export class ECPairKey {
 
     public getAddress(type: TypeAddress = "p2wpkh"): string {
 
-        let address: string 
+        let pubkey = this.getPublicKeyCompressed("hex")
 
-        if (type === "p2wpkh") {
-
-            let pubkey = Base58.decode(this.getPublicKeyCompressed())
-
-            let bech32 = new Bech32({ publicKey: pubkey, network: this.network })
-
-            address = bech32.getAddress()
-        } else {
-
-            let publicKey = this.getPublicKeyCompressed("hex") 
-
-            // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
-            let prefix = String(numberToHex(this.addressPrefix[this.network], 8, "hex"))
-
-            // the last param to ripemd160 -> true -> ripemd160(sha256(publicKey))
-            let pubScript = ripemd160(publicKey, true)
-
-            let script = prefix + pubScript //prefixAddress + scriptRipemd160
-            // the last param to sha256 -> true -> sha256(sha256(script)).substring(0, 8) - is a checksum(first 4 bytes)
-            let checkHash = checksum(script)
-
-            let result = script + checkHash
-
-            address = Base58.encode(result)
-        } 
-        return address
+        return Address.fromPubkey({ pubkey, type, network: this.network })
     }
 
     static fromWif(wif: string, options?: ECOptions): ECPairKey {
