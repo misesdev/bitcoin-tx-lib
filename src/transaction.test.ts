@@ -4,7 +4,7 @@ import { Transaction } from "./transaction"
 describe("default transaction tests", () => {
     
     const pairkey = ECPairKey.fromWif("92n4i3QMN55FTaxZh7JUz3QLg5HkawCDjh4AEcBwpvK61YX893g", {
-        network: "mainnet",
+        network: "testnet",
     })
 
     const transaction = new Transaction(pairkey)

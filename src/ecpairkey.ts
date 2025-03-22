@@ -119,7 +119,7 @@ export class ECPairKey {
             address = bech32.getAddress()
         } else {
 
-            let publicKey = this.getPublicKey() 
+            let publicKey = this.getPublicKeyCompressed("hex") 
 
             // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
             let prefix = String(numberToHex(this.addressPrefix[this.network], 8, "hex"))

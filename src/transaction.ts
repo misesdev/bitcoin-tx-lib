@@ -100,9 +100,10 @@ export class Transaction extends BaseTransaction {
 
     public getTxid(): string 
     {    
-        let hexTransaction = this.raw ?? this.build()
-
-        let hash = hash256(hexTransaction)
+        let hexTransaction = "02000000000102d6986bb800ba475f4de8fd2c9e96061150869ecf9119bc800848e03abb41d0900000000000ffffffff8d9b4613f310ec6f0324ab2dba4494236caacbb2d63a77e54063860b30b8de7f0000000000ffffffff01095e0000000000001976a914b334e6ed7bfc6a782eff6ecfe55c8abc10baaea388ac0247304402207bb407a44f00b2b0cb8e47656f30208c6d016a38284d1a028cfceaca86cd3d4a02201f999fd40aaec0bddc20efe6fae948a15e6e4ba6cf6c2d5cf4c3beb16d8ada4101210333b81ed541c4beee28783890c013f1e5dd4eb38f60b78a4d30b5cad26996217f0247304402206a1ad54a626df76c95a72761013f880d4120250e2cf8e3826cb6a6495dd0125a022012aa53b47113357f03517dc8f2c5f3cbffec357109d8b61be257a090eb6c46cf01210333b81ed541c4beee28783890c013f1e5dd4eb38f60b78a4d30b5cad26996217f00000000"
+        //this.raw ?? this.build()
+        
+        let hash = String(hash256(hexTransaction))
 
         return String(reverseEndian(hash))
     }
@@ -141,7 +142,7 @@ export class Transaction extends BaseTransaction {
 
         let signatureLength = String(numberToHex(getBytesCount(signature), 8, "hex"))
         
-        let publicKey = this.pairKey.getPublicKey()
+        let publicKey = this.pairKey.getPublicKeyCompressed("hex")
         let publicKeyLength = String(numberToHex(getBytesCount(publicKey), 8, "hex"))
         
         let scriptSig = signatureLength.concat(signature, publicKeyLength, publicKey)
