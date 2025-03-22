@@ -38,6 +38,7 @@ export class Transaction extends BaseTransaction {
             input.sequence = "ffffffff"
         
         this.inputs.push(input)
+        this.cachedata = {}
     }
 
     public addOutput(output: OutputTransaction) 
@@ -231,6 +232,7 @@ export class Transaction extends BaseTransaction {
         this.inputs = []
         this.outputs = []
         this.version = 2
+        this.cachedata = {}
     }
 }
 

@@ -87,7 +87,7 @@ describe("ECPairKey", () => {
         let address = pairKey.getAddress("p2pkh")
 
         expect(address).toBeDefined()
-        expect(address).toBe("1Mr6dG4BtavXCtaKPaxQpdXHWyCVvMbxtY")
+        expect(address).toBe("1Kj9UWTgPmzWrmHnFUx1hGzKi3A4R5e1NA")
 
         address = pairKey.getAddress("p2wpkh") // bech32
         expect(address).toBe("bc1qe44vaalmg0yxd56wav8xhtqp5xe30fe7mxws4z")

@@ -54,9 +54,8 @@ with no reliance on native modules.
 
 #### Transaction P2PKH 
 
-**Currently, P2PKH and P2PWKH transaction types are not accepted, 
-even though they are recognized and handled automatically by
-the Transaction class.**
+Currently, only P2PKH and P2WPKH transaction types are accepted.
+The Transaction class recognizes and processes them automatically.
 
 ```typescript
     import { ECPairKey, Transaction } from 'bitcoin-tx-lib'
@@ -65,7 +64,7 @@ the Transaction class.**
 
     var transaction = new Transaction(pairKey)
 
-    transaction.version = 1 // This line is optional, this is the default value
+    transaction.version = 2 // This line is optional, this is the default value
     transaction.locktime = 0 // This line is optional, this is the default value
 
     transaction.addInput({
@@ -86,7 +85,7 @@ the Transaction class.**
         value: 1000 // Amount in sats
     })
 
-    var transactionRow = transaction.build() // return transaction row hexadecimal signed
+    var transactionRow = transaction.build() // return transaction raw hexadecimal signed
     /*
         transactionRow: 02000000000101c6be2d35cce2b9def60ea1d1923bc6566fc2c8d30fb3d76a843
         92343855ead6f0100000000ffffffff01d00c000000000000160014aec042df56d9dc2fad0b30faf6
@@ -101,7 +100,3 @@ the Transaction class.**
    */
 ```
 
-**Warning**: Do not use this library outside a server environment. It is not designed 
-for performance. If performance is one of your requirements, consider using a 
-specialized library. At least for now, this implementation focuses on compatibility 
-across Node.js, React Native, React, etc.
