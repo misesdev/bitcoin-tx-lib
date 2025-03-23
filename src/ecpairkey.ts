@@ -1,6 +1,5 @@
 const Ecc = require('elliptic').ec
 import { Base58 } from "./base/base58";
-import { Bech32 } from "./base/bech32";
 import { BNetwork, ECOptions, Hex, TypeAddress } from "./types"
 import { bytesToHex, checksum, hexToBytes, numberToHex, ripemd160 } from "./utils";
 import { secp256k1 } from "@noble/curves/secp256k1";

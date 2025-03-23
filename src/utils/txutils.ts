@@ -2,7 +2,6 @@ import { bech32 } from "bech32"
 import { bytesToHex, hexToBytes, mergeUint8Arrays, ripemd160 } from "."
 import { Base58 } from "../base/base58"
 import { OP_CODES } from "../constants/opcodes"
-import { Bech32 } from "../base/bech32"
 
 export function addressToScriptPubKey(address: string): Uint8Array {
     if(["1", "m", "n"].includes(address[0])) {
@@ -12,13 +11,15 @@ export function addressToScriptPubKey(address: string): Uint8Array {
         const prefixScript = new Uint8Array([OP_CODES.OP_DUP, OP_CODES.OP_HASH160, hash.length])
         const sufixScript = new Uint8Array([OP_CODES.OP_EQUALVERIFY, OP_CODES.OP_CHECKSIG])
         return mergeUint8Arrays(prefixScript, hash, sufixScript)
-    } else if (["2", "3"].includes(address[0])) {
-        // P2SH Legacy
-        const decoded = hexToBytes(Base58.decode(address))
-        const hash = decoded.slice(1, -4) // remove the prefix and checksum
-        const prefixScript = new Uint8Array([OP_CODES.OP_HASH160, hash.length])
-        const sufixScript = new Uint8Array([OP_CODES.OP_EQUAL])
-        return mergeUint8Arrays(prefixScript, hash, sufixScript)
+    // wallet not support this type of transaction 
+    // } else if (["2", "3"].includes(address[0])) {
+    //     // P2SH Legacy
+    //     const decoded = hexToBytes(Base58.decode(address))
+    //     const hash = decoded.slice(1, -4) // remove the prefix and checksum
+    //     const prefixScript = new Uint8Array([OP_CODES.OP_HASH160, hash.length])
+    //     const sufixScript = new Uint8Array([OP_CODES.OP_EQUAL])
+    //     return mergeUint8Arrays(prefixScript, hash, sufixScript)
+    // } 
     } else if (["tb1", "bc1"].includes(address.substring(0,3))) {
         // SegWit (P2WPKH, P2WSH)
         const data = bech32.decode(address)
@@ -29,7 +30,7 @@ export function addressToScriptPubKey(address: string): Uint8Array {
         }
         throw new Error("Invalid bech32 format address")
     }
-    throw new Error("not supported format address")
+    throw new Error("not supported format address or type of transaction")
 }
 
 export function pubkeyToScriptCode(pubkey: string) {

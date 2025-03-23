@@ -1,7 +1,8 @@
 import { BNetwork, TypeAddress } from "../types"
 import { Bech32 } from "../base/bech32"
-import { checksum, getBytesCount, numberToHex, ripemd160 } from "."
+import { bytesToHex, checksum, getBytesCount, numberToHex, ripemd160 } from "."
 import { Base58 } from "../base/base58"
+import { addressToScriptPubKey } from "./txutils"
 
 interface PubkeyProps {
     pubkey: string,
@@ -69,4 +70,30 @@ export class Address {
         } 
     }
 
+    static getScriptPubkey(address: string) : string {
+        return bytesToHex(addressToScriptPubKey(address))
+    }
+
+    static getRipemd160(address: string): string {
+        let script = addressToScriptPubKey(address)
+
+        if(script[1] == 0x14 || script[1] == 0x20) 
+            return bytesToHex(script.slice(2))
+        if(script[0] == 0x76) 
+            return bytesToHex(script.slice(3, -2))
+
+        throw new Error("address not supported")
+    } 
+
+    static isValid(address: string) : boolean {
+        try {
+            let script = addressToScriptPubKey(address)
+
+            if(script[1] == 0x14 && script.slice(2).length != 0x14) return false
+            if(script[1] == 0x20 && script.slice(2).length != 0x20) return false
+            if(script[0] == 0x76 && script.slice(3, -2).length != 0x14) return false
+
+            return true
+        } catch { return false }
+    }
 }
