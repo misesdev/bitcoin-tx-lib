@@ -1,0 +1,17 @@
+import { Hex } from "../types";
+export type Response = "hex" | "bytes";
+export declare function bytesToHex(bytes: Hex): string;
+export declare function hexToBytes(hex: string, hexadecimal?: boolean): Uint8Array;
+export declare function sha256(messageHash: Hex, hash256?: boolean): Hex;
+export declare function hash256(message: Hex): Hex;
+export declare function ripemd160(messageHash: Hex, address?: boolean): Hex;
+export declare function checksum(messageHash: Hex, bytes?: number): Hex;
+export declare function reverseEndian(hex: Hex): Hex;
+export declare function numberToHex(number?: number, bits?: number, result?: Response): Hex;
+export declare function numberToHexLE(number?: number, bits?: number, result?: Response): Hex;
+export declare function hash160ToScript(hash160: Hex): Hex;
+export declare function reverseHexLE(hex: Hex, isBytes?: boolean): Hex;
+export declare function mergeUint8Arrays(...arrays: Uint8Array[]): Uint8Array;
+export declare function isEqual(...arrays: Uint8Array[]): boolean;
+export declare function numberToVarTnt(value: number, resultType?: Response): Hex;
+export declare function getBytesCount(hex: string): number;

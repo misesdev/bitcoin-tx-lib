@@ -5,7 +5,10 @@
         "module": "commonjs",
         "esModuleInterop": true,
         "outDir": "./lib",
-        "rootDir": "./"
+        "rootDir": "./",
+        "declaration": true,      
+        "declarationDir": "./lib", 
+        "sourceMap": true
     },
     "paths": {
         "@/*": [
