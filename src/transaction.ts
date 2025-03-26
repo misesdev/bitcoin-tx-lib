@@ -3,7 +3,7 @@ import { OP_CODES } from "./constants/opcodes";
 import { ECPairKey } from "./ecpairkey";
 import { bytesToHex, getBytesCount, hash256, hexToBytes, numberToHex, numberToHexLE,
     numberToVarTnt, reverseEndian } from "./utils";
-import { addressToScriptPubKey, scriptPubkeyToScriptCode } from "./utils/txutils";
+import { scriptPubkeyToScriptCode } from "./utils/txutils";
 import { Hex, InputTransaction } from "./types";
 
 type BuildFormat = "raw" | "txid"
@@ -23,10 +23,7 @@ export class Transaction extends BaseTransaction {
     }
 
     public build(format: BuildFormat = "raw"): string 
-    {      
-        if(this.cachedata[format])
-            return this.cachedata[format]
-
+    {    
         let witnessData: string = ""
         
         let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
@@ -61,8 +58,6 @@ export class Transaction extends BaseTransaction {
 
         hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
 
-        this.cachedata[format] = hexTransaction
-        
         return hexTransaction
     }
 

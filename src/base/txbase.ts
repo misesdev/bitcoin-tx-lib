@@ -1,5 +1,5 @@
 import { ECPairKey } from "../ecpairkey"
-import { Hex, InputTransaction, OutputTransaction } from "../types"
+import { InputTransaction, OutputTransaction } from "../types"
 import { bytesToHex, numberToHexLE, numberToVarTnt } from "../utils"
 import { addressToScriptPubKey } from "../utils/txutils"
 
