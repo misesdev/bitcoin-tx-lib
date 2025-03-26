@@ -63,7 +63,7 @@ export class Transaction extends BaseTransaction {
 
     public getTxid(): string 
     {    
-        let hexTransaction = this.cachedata["txid"] ?? this.build("txid")
+        let hexTransaction = this.build("txid")
         
         let hash = String(hash256(hexTransaction))
 
@@ -198,7 +198,7 @@ export class Transaction extends BaseTransaction {
        
         if(this.isSegwit()) witnessMK = 2
 
-        let hexTransaction = this.cachedata["raw"] ?? this.build()
+        let hexTransaction = this.build()
         
         let witnessInputs = this.inputs.filter(this.isSegwitInput)
 	    // witness size * 1
