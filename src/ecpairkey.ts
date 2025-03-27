@@ -4,6 +4,7 @@ import { BNetwork, ECOptions, Hex, TypeAddress } from "./types"
 import { bytesToHex, checksum, hexToBytes, numberToHex, ripemd160 } from "./utils";
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { Address } from "./utils/address";
+import { SignatureType } from "@noble/curves/abstract/weierstrass";
 
 export class ECPairKey {
 
@@ -54,12 +55,16 @@ export class ECPairKey {
         let data = messageHash
 
         if(typeof(messageHash) !== "object") data = hexToBytes(messageHash)
-       
-        let signature = secp256k1.sign(data, this.privateKey, { extraEntropy: true })
+      
+        // generate signatures until it is small
+        while(true) {
+            let signature : SignatureType = secp256k1.sign(data, this.privateKey, { extraEntropy: true })
 
-        if(signature.hasHighS()) signature.normalizeS()
-
-        return signature.toDERHex() // compressed=true
+            if(signature.hasHighS()) signature.normalizeS()
+            
+            if(signature.toDERRawBytes()[1] == 0x44) 
+                return signature.toDERHex()
+        }
     }
 
     public verifySignature(messageHash: Hex, derSignature: Hex): boolean {
