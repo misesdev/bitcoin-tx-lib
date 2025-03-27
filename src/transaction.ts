@@ -209,6 +209,7 @@ export class Transaction extends BaseTransaction {
         // discount the size of the witness fields and multiply by 4
         let transactionSize = getBytesCount(hexTransaction)
         transactionSize = (transactionSize - (witnessSize + witnessMK)) * 4 
+        transactionSize = transactionSize + (witnessSize + witnessMK) // * 1
         
         return transactionSize
     }

@@ -24,6 +24,8 @@ describe("transaction", () => {
         })
 
         expect(transaction.isSegwit()).toBe(false)
+        expect([752, 756]).toContain(transaction.weight())
+        expect([188, 189]).toContain(transaction.vBytes())
     })
 
     test("segwit transaction P2PWKH", () => {
@@ -43,9 +45,8 @@ describe("transaction", () => {
         })
 
         expect(transaction.isSegwit()).toBe(true)
-        expect(transaction.weight()).toBe(328)
-        expect(transaction.vBytes()).toBe(82)
-        console.log(transaction.build())
+        expect([437,438]).toContain(transaction.weight())
+        expect([109.5, 109.25]).toContain(transaction.vBytes())
     })
 
     test("get txid", () => {
