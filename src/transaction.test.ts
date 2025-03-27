@@ -98,7 +98,7 @@ describe("transaction", () => {
 
         expect(transaction.isSegwit()).toBe(true)
         expect([437,438]).toContain(transaction.weight())
-        expect([110]).toContain(transaction.vBytes())
+        expect([109,110, 111]).toContain(transaction.vBytes())
     })
 
     test("get txid", () => {

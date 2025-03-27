@@ -72,9 +72,6 @@ export class Transaction extends BaseTransaction {
 
     private generateScriptSig(inputSig: InputTransaction, resultType: "hex"|"bytes") : Hex
     {
-        if(this.cachedata[inputSig.txid]) 
-            return String(this.cachedata[inputSig.txid])
-
         let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
 
         hexTransaction += String(numberToVarTnt(this.inputs.length, "hex")) // number of inputs
@@ -113,8 +110,6 @@ export class Transaction extends BaseTransaction {
         
         let scriptSig = signatureLength.concat(signature, publicKeyLength, publicKey)
 
-        this.cachedata[inputSig.txid] = scriptSig
-
         if(resultType == "hex") return scriptSig
         
         return hexToBytes(scriptSig)
@@ -122,9 +117,6 @@ export class Transaction extends BaseTransaction {
 
     private generateWitness(input: InputTransaction, resultType: "hex"|"bytes" = "hex") : Hex
     {
-        if(this.cachedata[input.txid]) 
-            return String(this.cachedata[input.txid])
-
         let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
         // hashPrevouts
         let prevouts = this.inputs.map(input => {
@@ -172,8 +164,6 @@ export class Transaction extends BaseTransaction {
         
         let scriptSig = itemCount.concat(signatureLength, signature, publicKeyLength, publicKey)
         
-        this.cachedata[input.txid] = scriptSig
-
         if(resultType == "hex") return scriptSig
 
         return hexToBytes(scriptSig)
@@ -223,7 +213,6 @@ export class Transaction extends BaseTransaction {
     {
         this.inputs = []
         this.outputs = []
-        this.cachedata = {}
     }
 }
 
