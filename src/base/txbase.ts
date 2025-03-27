@@ -1,6 +1,7 @@
 import { ECPairKey } from "../ecpairkey"
 import { InputTransaction, OutputTransaction } from "../types"
-import { bytesToHex, numberToHexLE, numberToVarTnt } from "../utils"
+import { bytesToHex, getBytesCount, numberToHexLE, numberToVarTnt } from "../utils"
+import { Address } from "../utils/address"
 import { addressToScriptPubKey } from "../utils/txutils"
 
 export class BaseTransaction {
@@ -17,9 +18,11 @@ export class BaseTransaction {
     }
     
     public addInput(input: InputTransaction) 
-    {  
-        if(input.txid.length < 10)
-            throw new Error("Expected txid value")
+    { 
+        if(this.inputs.find(i => i.txid == input.txid))
+            throw new Error("An input with this txid has already been added")
+        if(getBytesCount(input.txid) != 32)
+            throw new Error("Expected a valid txid")
         else if(!input.scriptPubKey)
             throw new Error("Expected scriptPubKey")
 
@@ -28,13 +31,12 @@ export class BaseTransaction {
             input.sequence = "fffffffd"
         
         this.inputs.push(input)
-        this.cachedata = {}
     }
 
     public addOutput(output: OutputTransaction) 
     {
-        if(output.address.length <= 10)
-            throw new Error("Expected address value")
+        if(!Address.isValid(output.address))
+            throw new Error("Expected a valid address to output")
         if(output.amount <= 0)
             throw new Error("Expected a valid amount")
 

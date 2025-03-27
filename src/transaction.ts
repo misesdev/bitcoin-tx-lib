@@ -211,12 +211,12 @@ export class Transaction extends BaseTransaction {
         transactionSize = (transactionSize - (witnessSize + witnessMK)) * 4 
         transactionSize = transactionSize + (witnessSize + witnessMK) // * 1
         
-        return transactionSize
+        return Math.ceil(transactionSize)
     }
 
     // docs https://learnmeabitcoin.com/technical/transaction/size/
     public vBytes() {
-       	return this.weight() / 4 
+       	return Math.ceil(this.weight() / 4) 
     }
     
     public clear() 

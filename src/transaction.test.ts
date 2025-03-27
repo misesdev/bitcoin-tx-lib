@@ -9,7 +9,60 @@ describe("transaction", () => {
 
     const transaction = new Transaction(pairkey)
     
+    test("add input transaction", () => {
+        transaction.addInput({
+            txid: "16945364992874171da102f987c217f3ff13bb4817957f6a030169083a8ac8f0",
+            scriptPubKey: "76a914a8439c50793b033df810de257b313144a8f7edc988ac",
+            value: 29128, 
+            vout: 1
+        })
+        expect(1).toBe(transaction.inputs.length)
+
+        // add existent input
+        try {
+            transaction.addInput({
+                txid: "16945364992874171da102f987c217f3ff13bb4817957f6a030169083a8ac8f0",
+                scriptPubKey: "76a914a8439c50793b033df810de257b313144a8f7edc988ac",
+                value: 29128, 
+                vout: 1
+            })
+        } catch {}
+        expect(1).toBe(transaction.inputs.length)
+
+        // add invalid input
+        try {
+            transaction.addInput({
+                txid: "1694536499287417a102f987c217f3ff13bb4817957f6a030169083a8ac8f0",
+                scriptPubKey: "76a914a8439c50793b033df810de257b313144a8f7edc988ac",
+                value: 29128, 
+                vout: 1
+            })
+        } catch {}
+        expect(1).toBe(transaction.inputs.length)
+    })
+
+    test("add output transaction", () => {
+        transaction.addOutput({
+            address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
+            amount: (29128) - 500 
+        })
+        expect(1).toBe(transaction.outputs.length)
+        // add invalid input address
+        try {
+            transaction.addOutput({
+                address: "tb1q4mqy9h6km8wzltgtxra0vt4ffuruhg7vh8hlvf",
+                amount: (29128) - 500 
+            })
+        } catch {}
+        expect(1).toBe(transaction.outputs.length)
+        
+        let raw = transaction.outputsRaw()
+
+        expect(raw).toBe("d46f000000000000160014aec042df56d9dc2fad0b30faf62eb94f07cba3cc")
+    })
+
     test("transaction non segwit P2PKH", () => {
+        transaction.clear()
 
         transaction.addInput({
             txid: "16945364992874171da102f987c217f3ff13bb4817957f6a030169083a8ac8f0",
@@ -29,7 +82,6 @@ describe("transaction", () => {
     })
 
     test("segwit transaction P2PWKH", () => {
-       
         transaction.clear()
 
         transaction.addInput({
@@ -46,7 +98,7 @@ describe("transaction", () => {
 
         expect(transaction.isSegwit()).toBe(true)
         expect([437,438]).toContain(transaction.weight())
-        expect([109.5, 109.25]).toContain(transaction.vBytes())
+        expect([110]).toContain(transaction.vBytes())
     })
 
     test("get txid", () => {
