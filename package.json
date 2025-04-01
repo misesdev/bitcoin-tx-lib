@@ -18,14 +18,13 @@
         "p2pkh",
         "p2wpkh"
     ],
-    "author": "https://github.com/emptioapp",
+    "author": "https://github.com/misesdev",
     "license": "MIT",
     "main": "./lib/index.js",
     "types": "./lib/index.d.ts",
     "devDependencies": {
         "@types/jest": "^29.5.12",
         "@types/node": "^20.14.2",
-        "@types/ws": "^8.5.10",
         "jest": "^29.7.0",
         "ts-jest": "^29.1.4",
         "ts-node": "^10.9.2",
@@ -40,12 +39,12 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/emptioapp/bitcoin-tx-lib.git"
+        "url": "git+https://github.com/misesdev/bitcoin-tx-lib.git"
     },
     "bugs": {
-        "url": "https://github.com/emptioapp/bitcoin-tx-lib/issues"
+        "url": "https://github.com/misesdev/bitcoin-tx-lib/issues"
     },
-    "homepage": "https://github.com/emptioapp/bitcoin-tx-lib#readme",
+    "homepage": "https://github.com/misesdev/bitcoin-tx-lib#readme",
     "dependencies": {
         "@noble/curves": "^1.8.1",
         "@noble/hashes": "^1.7.1",
