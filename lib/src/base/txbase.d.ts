@@ -1,12 +1,14 @@
 import { ECPairKey } from "../ecpairkey";
 import { InputTransaction, OutputTransaction } from "../types";
-export declare class BaseTransaction {
+export declare abstract class BaseTransaction {
     version: number;
     locktime: number;
-    pairKey: ECPairKey;
-    cachedata: any;
     inputs: InputTransaction[];
     outputs: OutputTransaction[];
+    protected fee?: number;
+    protected whoPayTheFee?: string;
+    protected cachedata: any;
+    protected pairKey: ECPairKey;
     constructor(pairKey: ECPairKey);
     addInput(input: InputTransaction): void;
     addOutput(output: OutputTransaction): void;
