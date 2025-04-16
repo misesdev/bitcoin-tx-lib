@@ -60,7 +60,9 @@ The Transaction class recognizes and processes them automatically.
 ```typescript
     import { ECPairKey, Transaction } from 'bitcoin-tx-lib'
 
-    var pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ", { network: "testnet" })
+    var pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ", {
+        network: "testnet"
+    })
 
     var transaction = new Transaction(pairKey)
 
@@ -99,6 +101,56 @@ The Transaction class recognizes and processes them automatically.
         txid: 7c850c5f558d3ea982f2b1a940f4ec40104841793029302fbcb8958595066eaf
    */
 ```
+
+### Network fee
+
+To automatically handle the network fee, simply define who will pay the fee when
+instantiating the `Transaction`, distribute the total of the inputs among the outputs, and
+call the `resolveFee()` method:
+
+```typescript
+    var transaction = new Transaction(pairKey, {
+        whoPayTheFee: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
+        fee: 1, // estimated rate of 1 sat/vb
+    })
+    
+    transaction.addInput({
+        txid: "16945364992874171da102f987c217f3ff13bb4817957f6a030169083a8ac8f0",
+        scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9",
+        value: 30000, // total input value 
+        vout: 1
+    })
+    // distributes the total of the inputs to the outputs, the fee will be automatically removed
+    // from the specific output defined when calling resolveFee():
+    transaction.addOutput({
+        address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
+        amount: 15000 
+    })
+    transaction.addOutput({
+        address: "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj",
+        amount: 15000 
+    })
+    // Decrements the output fee for "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf" as defined 
+    // in the whoPayTheFee property of Transaction
+    transaction.resolveFee()
+    const row = transaction.build()
+```
+
+You can set `whoPayTheFee` to `"everyone"`, so when `resolveFee()` is executed, the fee will
+be evenly distributed among all transaction outputs. For example, if the fee is 240 satoshis 
+and the transaction has 2 outputs, each output will pay 120 satoshis.
+
+```typescript
+    var transaction = new Transaction(pairKey, {
+        whoPayTheFee: "everyone",
+        fee: 1, // estimated rate of 1 sat/vb
+    })
+    
+    //....
+    transaction.resolveFee()
+
+```
+
 
 **Note**: By default, the transaction is created with Replace-By-Fee enabled to 
 prevent it from getting stuck in the mempool due to very low fees. This allows you 

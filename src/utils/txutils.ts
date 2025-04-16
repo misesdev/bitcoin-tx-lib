@@ -62,7 +62,4 @@ export function scriptPubkeyToScriptCode(script: string) : string {
     throw new Error("scriptPubkey no segwit, expected P2WPKH")
 }
 
-// export function scroptPubkeyValidation(script: string) : string {
-
-// }
 

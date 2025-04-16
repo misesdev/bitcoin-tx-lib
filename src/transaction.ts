@@ -11,6 +11,8 @@ type BuildFormat = "raw" | "txid"
 interface TXOptions {
     version?: number;
     locktime?: number;
+    whoPayTheFee?: string;
+    fee?: number;
 }
 
 export class Transaction extends BaseTransaction {
@@ -20,6 +22,34 @@ export class Transaction extends BaseTransaction {
         super(pairkey)
         this.version = options?.version ?? 2
         this.locktime = options?.locktime ?? 0
+        this.whoPayTheFee = options?.whoPayTheFee
+        this.fee = options?.fee
+    }
+
+    public getFeeSats() {
+        return Math.ceil(this.vBytes() * (this.fee??1))
+    }
+
+    public resolveFee() : void
+    {
+        let satoshis = Math.ceil(this.vBytes() * (this.fee??1))
+
+        if(this.outputs.length == 1) {
+            this.outputs[0].amount -= satoshis
+            return
+        }
+        
+        if(this.whoPayTheFee === "everyone") {
+            satoshis = Math.ceil(this.vBytes() * (this.fee??1) / this.outputs.length)
+            this.outputs.forEach(out => out.amount -= satoshis)
+        }
+
+        for(let i = 0; i < this.outputs.length; i++) {
+            if(this.outputs[i].address == this.whoPayTheFee) {
+                this.outputs[i].amount -= satoshis
+                break
+            }
+        }
     }
 
     public build(format: BuildFormat = "raw"): string 
