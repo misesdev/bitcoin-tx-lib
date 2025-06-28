@@ -47,6 +47,7 @@
         "@noble/curves": "^1.8.1",
         "@noble/hashes": "^1.7.1",
         "bech32": "^2.0.0",
-        "elliptic": "^6.6.1"
+        "elliptic": "^6.6.1",
+        "hdkey": "^2.1.0"
     }
 }
