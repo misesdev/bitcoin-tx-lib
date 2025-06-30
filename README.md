@@ -7,7 +7,6 @@ with no reliance on native modules.
 
 ## Index
 
-- [bitcoin-tx-lib](#bitcoin-tx-lib)
 - [Install](#install)
 - [Manage Pair Key](#manage-pair-key)
   - [How to create and import key pair from different sources](#how-to-create-and-import-key-pair-from-different-sources)
@@ -15,7 +14,7 @@ with no reliance on native modules.
 - [How to set up a transaction](#how-to-set-up-a-transaction)
   - [Transaction](#transaction)
   - [Network fee](#network-fee)
-
+- [How manage Hierarchical Deterministic Keys](hdkmanager.md)
 
 ## Install 
 
