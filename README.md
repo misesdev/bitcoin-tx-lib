@@ -7,14 +7,13 @@ with no reliance on native modules.
 
 ## Index
 
-- [Install](#install)
 - [Manage Pair Key](#manage-pair-key)
   - [How to create and import key pair from different sources](#how-to-create-and-import-key-pair-from-different-sources)
   - [How to extract key pair information](#how-to-extract-key-pair-information)
 - [How to set up a transaction](#how-to-set-up-a-transaction)
   - [Transaction](#transaction)
   - [Network fee](#network-fee)
-- [How manage Hierarchical Deterministic Keys](hdkmanager.md)
+- [How to use Hierarchical Deterministic Keys](hdkmanager.md)
 
 ## Install 
 

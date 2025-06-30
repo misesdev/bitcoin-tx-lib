@@ -12,14 +12,26 @@ interface HDKParams {
     masterSeed: Uint8Array 
 }
 
+/**
+ * Manages BIP44 HD wallet derivation from a master seed or mnemonic.
+ */
 export class HDKManager {
-    
-    public purpose: number; // bip44
-    public coinType: number; // bitcoin
-    public account: number; // account number
-    public change: number; // index of address
+   
+    /** BIP44 purpose field (default: 44) */
+    public purpose: number; 
+    /** BIP44 coin type (default: 0 for Bitcoin) */
+    public coinType: number; 
+    /** BIP44 account number (default: 0) */
+    public account: number;
+    /** BIP44 change value: 0 for external, 1 for internal (default: 0) */
+    public change: number;
+    /** Root HD key derived from the master seed */
     private readonly root: HDKey;
     
+    /**
+     * Creates a new HDKManager from a master seed.
+     * @param params Object containing master seed and optional BIP44 path values.
+     */
     constructor(params: HDKParams) 
     {
         this.root = HDKey.fromMasterSeed(params.masterSeed)
@@ -30,13 +42,19 @@ export class HDKManager {
     }
     
     /**
-    *   
-    */
+     * Instantiates HDKManager from a hex-encoded master seed.
+     * @param seed Hex string master seed.
+     */
     public static fromMasterSeed(seed: string) : HDKManager
     {
         return new HDKManager({ masterSeed: hexToBytes(seed) }) 
     }
 
+    /**
+     * Instantiates HDKManager from a BIP39 mnemonic phrase.
+     * @param mnemonic Mnemonic phrase.
+     * @param password Optional BIP39 passphrase.
+     */
     public static fromMnemonic(mnemonic: string, password: string = "") : HDKManager
     {
         const masterSeed = mnemonicToSeedSync(mnemonic, password)
@@ -44,50 +62,84 @@ export class HDKManager {
         return new HDKManager({ masterSeed })
     }
 
-    public getKey(index: number) : Uint8Array 
+    /**
+     * Derives a private key from the BIP44 path ending with the given index.
+     * @param index Index in the derivation path.
+     * @returns Raw private key as Uint8Array.
+     */
+    public derivatePrivateKey(index: number) : Uint8Array 
     {
-        let path = `m/${this.purpose}'/${this.coinType}'/${this.account}'/${this.change}/${index}`
+        if (index < 0 || index > 2147483647) 
+            throw new Error("Invalid derivation index");
+
+        let path = this.getDerivationPath(index)
         let child = this.root.derive(path)
 
-        if(!child.privateKey)
-            throw new Error("missing private key")
+        if (!child.privateKey) 
+            throw new Error(`Missing private key at path ${path}`);
 
         return child.privateKey;
     }
 
-    public listHDKeys(quantity: number) : Uint8Array[]
+    /**
+     * Derives multiple private keys from indexes 0 to quantity - 1.
+     * @param quantity Number of keys to derive.
+     */
+    public deriveMultiplePrivateKeys(quantity: number) : Uint8Array[]
     {
         let result: Uint8Array[] = []
 
         for(let i = 0; i < quantity; i++)
         {
-            try {
-                result.push(this.getKey(i))
-            } 
-            catch {}
+            if (i < 0 || i > 2147483647) 
+                throw new Error("Invalid derivation index");
+            result.push(this.derivatePrivateKey(i))
         }
 
         return result;    
     }
 
-    public getPairKey(index: number, network: BNetwork = "mainnet") : ECPairKey
+    /**
+     * Derives an ECPairKey from a private key at a specific index.
+     * @param index Index in the derivation path.
+     * @param options with network Network: 'mainnet' or 'testnet' (default: mainnet).
+     */
+    public derivatePairKey(index: number, options?: { network?: BNetwork }) : ECPairKey
     {
-        let privateKey = bytesToHex(this.getKey(index))
+        if (index < 0 || index > 2147483647) 
+            throw new Error("Invalid derivation index");
+        
+        let privateKey = bytesToHex(this.derivatePrivateKey(index))
 
-        return ECPairKey.fromHex({ privateKey, network })
+        return ECPairKey.fromHex({ privateKey, network: options?.network ?? "mainnet" })
     }
 
-    public listPairKeys(quantity: number, network: BNetwork = "mainnet") : ECPairKey[]
+    /**
+     * Derives multiple ECPairKeys for indexes 0 to quantity - 1.
+     * @param quantity Number of pair keys to derive.
+     * @param network Network: 'mainnet' or 'testnet' (default: mainnet).
+     */
+    public derivateMultiplePairKeys(quantity: number, options?: { network?: BNetwork }) : ECPairKey[]
     {
         let result: ECPairKey[] = []
         for(let i = 0; i < quantity; i++)
         {
-            try {
-                let privateKey = bytesToHex(this.getKey(i))
-                result.push(ECPairKey.fromHex({ privateKey, network }))
-            } 
-            catch {}
+            if (i < 0 || i > 2147483647) 
+                throw new Error("Invalid derivation index");
+            result.push(this.derivatePairKey(i, { network: options?.network ?? "mainnet" }))
         }
         return result
+    }
+
+    /**
+     * Returns the full BIP44 derivation path for a given index.
+     * @param index Index to complete the path.
+     */
+    public getDerivationPath(index: number) 
+    {
+        if (index < 0 || index > 2147483647) 
+            throw new Error("Invalid derivation index");
+       
+        return `m/${this.purpose}'/${this.coinType}'/${this.account}'/${this.change}/${index}`
     }
 }
