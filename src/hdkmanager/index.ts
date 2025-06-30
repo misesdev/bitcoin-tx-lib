@@ -1,5 +1,5 @@
 import { HDKey } from "@scure/bip32";
-import { bytesToHex, hexToBytes } from "../utils";
+import { bytesToHex } from "../utils";
 import { mnemonicToSeedSync } from "bip39";
 import { ECPairKey } from "../ecpairkey";
 import { BNetwork } from "../types";
@@ -9,11 +9,11 @@ interface HDKParams {
     coinType?: number;
     account?: number;
     change?: number;
-    masterSeed: Uint8Array 
+    rootKey: HDKey;
 }
 
 /**
- * Manages BIP44 HD wallet derivation from a master seed or mnemonic.
+ * Manages BIP44 HD keys derivation from a master seed or mnemonic.
  */
 export class HDKManager {
    
@@ -26,7 +26,7 @@ export class HDKManager {
     /** BIP44 change value: 0 for external, 1 for internal (default: 0) */
     public change: number;
     /** Root HD key derived from the master seed */
-    private readonly root: HDKey;
+    private readonly _rootKey: HDKey;
     
     /**
      * Creates a new HDKManager from a master seed.
@@ -34,7 +34,7 @@ export class HDKManager {
      */
     constructor(params: HDKParams) 
     {
-        this.root = HDKey.fromMasterSeed(params.masterSeed)
+        this._rootKey = params.rootKey 
         this.purpose = params.purpose ?? 44
         this.coinType = params.coinType ?? 0
         this.account = params.account ?? 0
@@ -45,9 +45,10 @@ export class HDKManager {
      * Instantiates HDKManager from a hex-encoded master seed.
      * @param seed Hex string master seed.
      */
-    public static fromMasterSeed(seed: string) : HDKManager
+    public static fromMasterSeed(masterSeed: Uint8Array) : HDKManager
     {
-        return new HDKManager({ masterSeed: hexToBytes(seed) }) 
+        const rootKey = HDKey.fromMasterSeed(masterSeed)
+        return new HDKManager({ rootKey }) 
     }
 
     /**
@@ -55,11 +56,33 @@ export class HDKManager {
      * @param mnemonic Mnemonic phrase.
      * @param password Optional BIP39 passphrase.
      */
-    public static fromMnemonic(mnemonic: string, password: string = "") : HDKManager
+    public static fromMnemonic(mnemonic: string, password?: string) : HDKManager
     {
         const masterSeed = mnemonicToSeedSync(mnemonic, password)
+        const rootKey = HDKey.fromMasterSeed(masterSeed)
+        return new HDKManager({ rootKey })
+    }
 
-        return new HDKManager({ masterSeed })
+    /**
+     * Creates an instance from an extended private key (xpriv).
+     */
+    public static fromXPriv(xpriv: string, pathParams: Omit<HDKParams, 'masterSeed' | 'rootKey'> = {}): HDKManager {
+        const rootKey = HDKey.fromExtendedKey(xpriv);
+        if (!rootKey.privateKey) 
+            throw new Error("Provided xpriv is invalid or missing private key");
+        
+        return new HDKManager({ ...pathParams, rootKey });
+    }
+
+    /**
+     * Creates an instance from an extended public key (xpub). 
+     * Only public derivation will be available.
+     */
+    public static fromXPub(xpub: string, pathParams: Omit<HDKParams, 'masterSeed' | 'rootKey'> = {}): HDKManager {
+        const rootKey = HDKey.fromExtendedKey(xpub);
+        if (rootKey.privateKey) 
+            throw new Error("xpub should not contain a private key");
+        return new HDKManager({ ...pathParams, rootKey });
     }
 
     /**
@@ -73,7 +96,7 @@ export class HDKManager {
             throw new Error("Invalid derivation index");
 
         let path = this.getDerivationPath(index)
-        let child = this.root.derive(path)
+        let child = this._rootKey.derive(path)
 
         if (!child.privateKey) 
             throw new Error(`Missing private key at path ${path}`);
@@ -141,5 +164,13 @@ export class HDKManager {
             throw new Error("Invalid derivation index");
        
         return `m/${this.purpose}'/${this.coinType}'/${this.account}'/${this.change}/${index}`
+    }
+
+    /**
+     * Checks if the current root key has a private key.
+     */
+    public hasPrivateKey() 
+    {
+        return !!this._rootKey.privateKey
     }
 }

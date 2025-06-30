@@ -1,7 +1,7 @@
 import { mnemonicToSeedSync } from 'bip39';
 import { HDKManager } from '.';
-import { bytesToHex } from '../utils';
 import { ECPairKey } from '../ecpairkey';
+import { HDKey } from "@scure/bip32";
 
 const TEST_MNEMONIC = 'pistol lesson rigid season script crouch clog spin lottery canal deal leaf';
 const TEST_PASSWORD = 'test-password';
@@ -19,9 +19,8 @@ describe('HDKManager', () => {
     });
 
     test('should create an instance from master seed (hex string)', () => {
-        const seed = mnemonicToSeedSync(TEST_MNEMONIC);
-        const hexSeed = bytesToHex(seed);
-        const hdk = HDKManager.fromMasterSeed(hexSeed);
+        const masterSeed = mnemonicToSeedSync(TEST_MNEMONIC);
+        const hdk = HDKManager.fromMasterSeed(masterSeed);
         expect(hdk).toBeInstanceOf(HDKManager);
     });
 
@@ -69,12 +68,12 @@ describe('HDKManager', () => {
     test('should throw error if derived key has no private key', () => {
         const hdk = HDKManager.fromMnemonic(TEST_MNEMONIC);
         // monkey-patch internal derive to simulate error
-        const original = hdk['root'].derive;
-        hdk['root'].derive = () => ({ privateKey: undefined } as any);
+        const original = hdk['_rootKey'].derive;
+        hdk['_rootKey'].derive = () => ({ privateKey: undefined } as any);
 
         expect(() => hdk.derivatePrivateKey(0)).toThrow();
 
-        hdk['root'].derive = original; // restore
+        hdk['_rootKey'].derive = original; // restore
     });
 
     test('should use default BIP44 path components when not provided', () => {
@@ -86,9 +85,9 @@ describe('HDKManager', () => {
     });
 
     test('should allow custom BIP44 path components via constructor', () => {
-        const seed = mnemonicToSeedSync(TEST_MNEMONIC);
+        const masterSeed = mnemonicToSeedSync(TEST_MNEMONIC);
         const hdk = new HDKManager({
-            masterSeed: seed,
+            rootKey: HDKey.fromMasterSeed(masterSeed),
             purpose: 49,
             coinType: 1,
             account: 2,
