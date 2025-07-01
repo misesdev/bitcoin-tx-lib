@@ -12,18 +12,13 @@ A TypeScript class for managing hierarchical deterministic (HD) wallets followin
 * Network selection (mainnet or testnet).
 * Watch-only support (from xpub).
 
-## Installation
-
-```bash
-npm install your-hdwallet-library
-```
 
 ## Usage
 
 ### Import
 
 ```ts
-import { HDWallet } from "./hdwallet";
+import { HDWallet } from "bitcoin-tx-lib";
 ```
 
 ---
