@@ -183,7 +183,7 @@ export class HDKManager {
         
         let privateKey = bytesToHex(this.derivatePrivateKey(index, pathOptions))
 
-        return ECPairKey.fromHex({ privateKey, network: options?.network ?? "mainnet" })
+        return ECPairKey.fromHex(privateKey, options?.network ?? "mainnet")
     }
 
     /**

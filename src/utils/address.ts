@@ -1,7 +1,7 @@
 import { BNetwork, TypeAddress } from "../types"
 import { Bech32 } from "../base/bech32"
-import { bytesToHex, checksum, getBytesCount, numberToHex, ripemd160 } from "."
-import { Base58 } from "../base/base58"
+import { bytesToHex, checksum, getBytesCount, hexToBytes, numberToHex, ripemd160 } from "."
+import { base58 } from "@scure/base"
 import { addressToScriptPubKey } from "./txutils"
 
 interface PubkeyProps {
@@ -41,7 +41,7 @@ export class Address {
 
             let result = script + checkHash
 
-            return Base58.encode(result)
+            return base58.encode(hexToBytes(result))
         }
     }
 
@@ -66,7 +66,7 @@ export class Address {
 
             let result = script + checkHash
 
-            return Base58.encode(result)
+            return base58.encode(hexToBytes(result))
         } 
     }
 

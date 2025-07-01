@@ -69,7 +69,7 @@ describe("utils", () => {
     })
 
     test("hash checksum", () => {
-        const checksumBytes = checksum(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"))
+        const checksumBytes = checksum(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D")) as Uint8Array
         
         expect(bytesToHex(checksumBytes)).toBe("507a5b8d")
     })
@@ -87,7 +87,7 @@ describe("utils", () => {
         //expect(bytesToHex(hash)).toBe("fad534e4b13dd564f2c0e20120e79ff1d5b07548")
 
         // generate for address ripemd160(sha256(hash))
-        hash = ripemd160(hexToBytes(sha256), true)
+        hash = ripemd160(hexToBytes(sha256), true) as Uint8Array
    
         expect(bytesToHex(hash)).toBe("58077dda57de14ac9f055c64bf3c71ff0b5796da")
     })
@@ -139,7 +139,7 @@ describe("utils", () => {
 
     test("convert hexadecimal string bytes in little-endian", () => {
 
-        let little = reverseHexLE(new Uint8Array([0xff, 0x80, 0x99]))
+        let little = reverseHexLE(new Uint8Array([0xff, 0x80, 0x99])) as Uint8Array
 
         expect(bytesToHex(little)).toBe("9980ff")
     })

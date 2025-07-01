@@ -1,16 +1,14 @@
 import { OP_CODES } from "../constants/opcodes"
-import { ripemd160 as ripemd160Noble } from "@noble/hashes/ripemd160"
-import { sha256 as sha256Noble } from "@noble/hashes/sha256"
+import { ripemd160 as ripemd160Noble } from "@noble/hashes/legacy"
+import { sha256 as sha256Noble } from "@noble/hashes/sha2"
 import { Hex } from "../types"
 
 export type Response = "hex" | "bytes"
 
-export function bytesToHex(bytes: Hex): string {
+export function bytesToHex(bytes: Uint8Array): string {
 
     if (bytes.length <= 0)
         throw new Error("The byte array is empty!")
-    if(typeof(bytes) == "string")
-        throw new Error("Expected the type Uint8Array")
 
     let hexValue: string = ""
 
@@ -106,7 +104,7 @@ export function checksum(messageHash: Hex, bytes: number = 4): Hex {
     // generate the hash256(sha256(content)) and return first 4 bytes (doc: https://en.bitcoin.it/wiki/BIP_0174)
     let hash = sha256Noble(data)
 
-    hash = sha256Noble(hash).slice(0, bytes) //.substring(0, bytes * 2)
+    hash = sha256Noble(hash).slice(0, bytes) 
 
     if(typeof(messageHash) == "string")
         return bytesToHex(hash)

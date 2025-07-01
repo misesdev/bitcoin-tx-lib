@@ -1,188 +1,201 @@
+
 # HDWallet
 
-`HDWallet` is a TypeScript class for managing Hierarchical Deterministic (HD) wallets with support for:
+A TypeScript class for managing hierarchical deterministic (HD) wallets following BIP32/BIP44 standards. It supports generation, import, and derivation of Bitcoin addresses and keys, including watch-only (xpub-based) functionality.
 
-* BIP-39 mnemonic generation and validation
-* xprv and xpub import
-* Public/private key derivation
-* Bitcoin address generation (`p2wpkh`, `p2pkh`, etc)
-* Watch-only wallets
-* BIP-32/44 path customization
+## Features
 
----
+* Create a new HD wallet from a randomly generated mnemonic (BIP39).
+* Import from mnemonic, xpriv, or xpub.
+* Derive public/private keys and addresses.
+* Support for receive/change paths (BIP44).
+* Network selection (mainnet or testnet).
+* Watch-only support (from xpub).
 
 ## Installation
 
-Install the library and required dependencies:
-
 ```bash
-npm install bitcoin-tx-lib bip39
+npm install your-hdwallet-library
+```
+
+## Usage
+
+### Import
+
+```ts
+import { HDWallet } from "./hdwallet";
 ```
 
 ---
 
-## Features
-
-* Create new wallets using a random BIP-39 mnemonic
-* Import existing wallets using mnemonic, xpriv, or xpub
-* Support for mainnet and testnet
-* Derive keys and addresses by index
-* Watch-only wallet support using xpub
-* Custom derivation paths using optional parameters
-
----
-
-## Usage
+## API
 
 ### Create a New Wallet
 
 ```ts
-import { HDWallet } from "bitcoin-tx-lib";
+const { mnemonic, hdwallet } = HDWallet.create("optional-password", { network: "testnet" });
 
-const { mnemonic, hdwallet } = HDWallet.create(undefined, { network: "mainnet" });
-
-console.log("Mnemonic:", mnemonic);
-console.log("First address:", hdwallet.getAddress(0));
+console.log(mnemonic);
+console.log(hdwallet.getXPriv());
 ```
 
----
+### Import Wallet
 
-### Import from Mnemonic
+You can import from a mnemonic, xpriv, or xpub:
 
 ```ts
-const mnemonic = "solution beach rail rubber waste ready firm rural remove utility bachelor olive";
+const fromMnemonic = HDWallet.import("your seed phrase here", "optional-password");
 
-const { hdwallet } = HDWallet.import(mnemonic, "", { network: "mainnet" });
+const fromXPriv = HDWallet.import("xprv...", undefined, { network: "mainnet" });
 
-console.log("Address:", hdwallet.getAddress(0));
+const fromXPub = HDWallet.import("xpub...", undefined, { network: "mainnet" });
 ```
 
 ---
 
-### Import from xpriv
+### Derive Addresses
+
+#### List Receive Addresses
+
+Returns external addresses for receiving payments.
 
 ```ts
-const xpriv = "xprv9s21ZrQH143K3...";
-
-const { hdwallet } = HDWallet.import(xpriv, undefined, { network: "mainnet" });
-
-console.log("xpub:", hdwallet.getXPub());
+const addresses = hdwallet.listReceiveAddresses(5, "p2wpkh", 0);
 ```
 
----
+* `quantity`: number of addresses
+* `type`: "p2wpkh" | "p2pkh" | etc.
+* `account`: account index (default: 0)
 
-### Import from xpub (Watch-Only Wallet)
+#### List Change Addresses
+
+Returns internal addresses for change outputs.
 
 ```ts
-const xpub = "xpub6CUGRU...";
-
-const { hdwallet } = HDWallet.import(xpub, undefined, { network: "mainnet" });
-
-console.log("Is watch-only:", hdwallet.isWatchOnly);
-console.log("Address:", hdwallet.getAddress(0));
+const changeAddresses = hdwallet.listChangeAddresses(3, "p2wpkh", 0);
 ```
 
 ---
 
-## API Reference
+### Get Specific Address
 
-### `HDWallet.create(password?: string, options?: HDWalletOptions): IHDWallet`
-
-Creates a new HD wallet from a random BIP-39 mnemonic.
-
-* `password` (optional): Optional passphrase for mnemonic seed derivation
-* `options.network`: `"mainnet"` or `"testnet"`
-* Returns: `{ mnemonic: string, hdwallet: HDWallet }`
+```ts
+const addr = hdwallet.getAddress(0, "p2wpkh", { account: 0, change: 0 });
+```
 
 ---
 
-### `HDWallet.import(input: string, password?: string, options?: HDWalletOptions): IHDWallet`
+### Get Key Information
 
-Automatically detects the input type and imports the wallet:
+```ts
+hdwallet.getMasterPrivateKey(); // Uint8Array
+hdwallet.getMasterPublicKey();  // Uint8Array
 
-* If `input` is a BIP-39 mnemonic, it validates and derives the wallet
-* If `input` is an xpriv or xpub, it parses accordingly
-* Returns: `{ mnemonic?: string, hdwallet: HDWallet }`
+hdwallet.getPrivateKey(0);
+hdwallet.getPublicKey(0);
+hdwallet.getPairKey(0);
 
----
-
-### `hdwallet.getAddress(index: number, options?, pathOptions?)`
-
-Derives an address at the specified index.
-
-* `options.type`: `"p2wpkh"` (default), `"p2pkh"`, `"p2sh"`
-* `pathOptions`: Optional overrides for purpose, account, coinType, etc
-* Returns: a Bitcoin address string
+hdwallet.getXPriv(); // throws if watch-only
+hdwallet.getXPub();
+```
 
 ---
 
-### `hdwallet.listAddresses(quantity: number, options?, pathOptions?)`
+## Path Derivation Structure
 
-Returns a list of derived addresses.
+The wallet follows the BIP44 derivation structure:
 
-* `quantity`: Number of addresses to generate
-* `options.type`: Address type
-* `pathOptions`: Optional path configuration
-* Returns: string\[]
+```
+m / purpose' / coin_type' / account' / change / address_index
+```
 
----
+* `purpose`: Usually `44'`
+* `coin_type`: `0'` for Bitcoin mainnet, `1'` for testnet
+* `account`: Logical separation between different wallets or purposes
+* `change`: `0` for receive, `1` for change
+* `index`: Incrementing index for addresses
 
-### `hdwallet.getXPriv()`
-
-Returns the extended private key (xprv). Throws if the wallet is watch-only.
-
----
-
-### `hdwallet.getXPub()`
-
-Returns the extended public key (xpub).
+If using a **watch-only wallet**, only non-hardened paths are supported.
 
 ---
 
-### `hdwallet.getPrivateKey(index: number, pathOptions?)`
+## Watch-Only Support
 
-Derives the private key at the given index. Throws if the wallet is watch-only.
+When a wallet is imported from an `xpub`, it is in **watch-only** mode:
 
-* Returns: `Uint8Array`
+```ts
+const { hdwallet } = HDWallet.import("xpub...");
+console.log(hdwallet.isWatchOnly); // true
 
----
-
-### `hdwallet.getPublicKey(index: number, pathOptions?)`
-
-Returns the public key for the given index.
-
----
-
-### `hdwallet.getPairKey(index: number, pathOptions?)`
-
-Returns an ECPairKey (public + private key) for signing or address derivation.
+hdwallet.getPublicKey(0); // works
+hdwallet.getPrivateKey(0); // throws
+hdwallet.getXPriv(); // throws
+```
 
 ---
 
-### `hdwallet.getMasterPrivateKey()` / `getMasterPublicKey()`
+## Example: Managing Multiple Accounts
 
-Returns the root keys in `Uint8Array` format.
+```ts
+// Account 0 - personal wallet
+const personal = hdwallet.listReceiveAddresses(3, "p2wpkh", 0);
+
+// Account 1 - business wallet
+const business = hdwallet.listReceiveAddresses(3, "p2wpkh", 1);
+
+// Change addresses for account 0
+const change = hdwallet.listChangeAddresses(2, "p2wpkh", 0);
+```
 
 ---
 
-### `hdwallet.isWatchOnly`
+## Error Handling
 
-Returns `true` if the wallet was created from an xpub (public key only).
+Some actions throw errors if used improperly:
+
+* Trying to access private keys in watch-only mode
+* Deriving with invalid mnemonic
+* Deriving from hardened paths in xpub-based wallets
+
+Example:
+
+```ts
+try {
+  hdwallet.getPrivateKey(0);
+} catch (e) {
+  console.error(e.message); // The wallet only has the public key, it is read-only
+}
+```
 
 ---
 
-## Notes
+## Types
 
-* You can only derive **non-hardened paths** (e.g. `m/0/0`) when using an `xpub`.
-* Hardened derivation (e.g. `m/44'/0'/0'`) requires an `xprv` or mnemonic.
-* The default derivation path follows the BIP44 format:
-  `m / purpose' / coin_type' / account' / change / address_index`
+### `TypeAddress`
+
+Supported types:
+
+* `"p2wpkh"` (default)
+* `"p2pkh"`
+* `"p2sh"`
+* Extendable for other output scripts.
+
+### `PathOptions`
+
+```ts
+interface PathOptions {
+  account?: number;
+  change?: 0 | 1;
+}
+```
+
+Used to customize BIP44 derivation path.
 
 ---
 
 ## License
 
-MIT License
+MIT
 
 ---
 

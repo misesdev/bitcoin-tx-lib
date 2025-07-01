@@ -10,8 +10,6 @@ describe('HDKManager', () => {
 
     test('should create an instance from mnemonic without password', () => {
         const hdk = HDKManager.fromMnemonic(TEST_MNEMONIC);
-        console.log(hdk.getXPriv())
-        console.log(hdk.getXPub())
         expect(hdk).toBeInstanceOf(HDKManager);
     });
 

@@ -1,6 +1,6 @@
 {
     "name": "bitcoin-tx-lib",
-    "version": "0.3.5",
+    "version": "0.3.6",
     "description": "A Typescript library for building and signing Bitcoin transactions",
     "scripts": {
         "test": "jest",
@@ -46,9 +46,9 @@
     "dependencies": {
         "@noble/curves": "^1.8.1",
         "@noble/hashes": "^1.7.1",
+        "@scure/base": "^1.2.6",
         "@scure/bip32": "^1.7.0",
         "bech32": "^2.0.0",
-        "bip39": "^3.1.0",
-        "elliptic": "^6.6.1"
+        "bip39": "^3.1.0"
     }
 }

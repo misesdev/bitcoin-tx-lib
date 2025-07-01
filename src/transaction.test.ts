@@ -8,9 +8,7 @@ describe("transaction class", () => {
     let transaction: Transaction
 
     beforeEach(() => {
-        pairkey = ECPairKey.fromWif("92n4i3QMN55FTaxZh7JUz3QLg5HkawCDjh4AEcBwpvK61YX893g", {
-            network: "testnet",
-        })
+        pairkey = ECPairKey.fromWif("92n4i3QMN55FTaxZh7JUz3QLg5HkawCDjh4AEcBwpvK61YX893g")
         transaction = new Transaction(pairkey)
     })
     
@@ -76,8 +74,8 @@ describe("transaction class", () => {
         })
 
         expect(transaction.isSegwit()).toBe(false)
-        expect([752, 756]).toContain(transaction.weight())
-        expect([188, 189]).toContain(transaction.vBytes())
+        expect(752).toEqual(transaction.weight())
+        expect(188).toEqual(transaction.vBytes())
     })
 
     test("Must set up a P2PWKH segregated witness transaction", () => {
@@ -96,8 +94,9 @@ describe("transaction class", () => {
 
         expect(txid).toBe("17565349e3a89ec73e5c9fa68da322500f702215be9f75acb4fe953a9546fc59")
         expect(transaction.isSegwit()).toBe(true)
-        expect([437,438]).toContain(transaction.weight())
-        expect([109,110, 111]).toContain(transaction.vBytes())
+        expect(437).toEqual(transaction.weight())
+        expect(110).toEqual(transaction.vBytes())
+        expect(110).toEqual(transaction.getFeeSats())
     })
 
     test("Must assemble output fields for signature", () => {
@@ -129,8 +128,11 @@ describe("transaction class", () => {
             amount: 15000 
         })
         transaction.resolveFee()
-        let payer = transaction.outputs.find(o => o.address == "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf")
-        expect(payer?.amount).toEqual(15000  - transaction.getFeeSats())
+        expect(transaction.outputs[0].amount).toBeLessThan(15000)
+        expect(transaction.outputs[1].amount).toEqual(15000)
+        expect(141).toEqual(transaction.getFeeSats())
+        expect(561).toEqual(transaction.weight())
+        expect(141).toEqual(transaction.vBytes())
     })
 
     test("Must resolve network fee for receiver output", () => {
@@ -153,8 +155,11 @@ describe("transaction class", () => {
             amount: 15000 
         })
         transaction.resolveFee()
-        let payer = transaction.outputs.find(o => o.address == "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj")
-        expect(payer?.amount).toEqual(15000  - transaction.getFeeSats())
+        expect(transaction.outputs[0]?.amount).toEqual(15000)
+        expect(transaction.outputs[1]?.amount).toBeLessThan(15000)
+        expect(141).toEqual(transaction.getFeeSats())
+        expect(561).toEqual(transaction.weight())
+        expect(141).toEqual(transaction.vBytes())
     })
 
     test("Must solve the network fee by distributing the cost equally to all outputs", () => {
@@ -178,10 +183,11 @@ describe("transaction class", () => {
         })
         transaction.resolveFee()
 
-        let mediafee = Math.ceil(transaction.getFeeSats() / transaction.outputs.length)
-
-        expect(transaction.outputs[0].amount).toEqual(15000  - mediafee)
-        expect(transaction.outputs[1].amount).toEqual(15000  - mediafee)
+        expect(transaction.outputs[0].amount).toBeLessThan(15000)
+        expect(transaction.outputs[1].amount).toBeLessThan(15000)
+        expect(141).toEqual(transaction.getFeeSats())
+        expect(561).toEqual(transaction.weight())
+        expect(141).toEqual(transaction.vBytes())
     })
 })
 

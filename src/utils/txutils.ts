@@ -1,12 +1,12 @@
 import { bech32 } from "bech32"
 import { bytesToHex, hexToBytes, mergeUint8Arrays, ripemd160 } from "."
-import { Base58 } from "../base/base58"
+import { base58 } from "@scure/base" 
 import { OP_CODES } from "../constants/opcodes"
 
 export function addressToScriptPubKey(address: string): Uint8Array {
     if(["1", "m", "n"].includes(address[0])) {
         // P2PKH Legacy
-        const decoded = hexToBytes(Base58.decode(address))
+        const decoded = base58.decode(address)
         const hash = decoded.slice(1, -4) // remove the prefix and checksum
         const prefixScript = new Uint8Array([OP_CODES.OP_DUP, OP_CODES.OP_HASH160, hash.length])
         const sufixScript = new Uint8Array([OP_CODES.OP_EQUALVERIFY, OP_CODES.OP_CHECKSIG])

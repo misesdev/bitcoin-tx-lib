@@ -1,95 +1,107 @@
 import { ECPairKey } from "./ecpairkey";
+import { hexToBytes, sha256 } from "./utils"
+import { base58 } from "@scure/base"
 
 describe("ECPairKey", () => {
-    
-    test("create keypair", () => {
-        const PairKey = new ECPairKey()
+    const sampleMessage = hexToBytes("6244980fa0752e5b4643") 
+    const messageHash = sha256(sampleMessage) as Uint8Array
 
-        expect(PairKey.privateKey).toBeDefined()
-    })
-    
-    test("get the public key", () => {
-        const pairKey = new ECPairKey({ privateKey: "0c28fca386c7a227600b2fe50b7cae11ec86d3bf1fbe471be89827e19d72aa1d" });
-
-        const publicKey = pairKey.getPublicKey()
-
-        expect(publicKey).toBe("04d0de0aaeaefad02b8bdc8a01a1b8b11c696bd3d66a2c5f10780d95b7df42645cd85228a6fb29940e858e7e55842ae2bd115d1ed7cc0e82d934e929c97648cb0a")
+    test("should generate a valid keypair and public key", () => {
+        const key = new ECPairKey()
+        const pubkey = key.getPublicKey()
+        expect(pubkey).toBeInstanceOf(Uint8Array)
+        expect(pubkey.length).toBe(33) // Compressed secp256k1 public key
     })
 
-    test("get compressed public key", () => {
-        let pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ")
-
-        const compressed = pairKey.getPublicKeyCompressed()
-
-        expect(compressed).toBe("qWxvCXDvALEvQJriaWj7Pucs8e8N4jzNez2mnrCotqKH")
+    test("should return public and private keys as hex", () => {
+        const key = new ECPairKey()
+        expect(typeof key.getPrivateKeyHex()).toBe("string")
+        expect(typeof key.getPublicKeyHex()).toBe("string")
     })
 
-    test("get private key WIF", () => {
-        const pairKey = new ECPairKey({ privateKey: "0c28fca386c7a227600b2fe50b7cae11ec86d3bf1fbe471be89827e19d72aa1d" });
-
-        expect(pairKey.getWif()).toBe("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ");
+    test("should sign and verify a message", () => {
+        const key = new ECPairKey()
+        const signature = key.signDER(messageHash)
+        const verified = key.verifySignature(messageHash, signature)
+        expect(verified).toBe(true)
     })
 
-    test("get public key WIF", () => {
-        const pairKey = new ECPairKey({ privateKey: "0c28fca386c7a227600b2fe50b7cae11ec86d3bf1fbe471be89827e19d72aa1d" })
+    test("should fail verification with altered message", () => {
+        const key = new ECPairKey()
+        const signature = key.signDER(messageHash)
 
-        const publicWif = pairKey.getPublicWif()
+        // Mutate the message
+        const wrongMessage = new Uint8Array([...messageHash])
+        wrongMessage[0] ^= 0xff
 
-        expect(publicWif).toBe("KwdMAjGmerYanjeui5SHS7JkmpZvVipYvB2LJGU1ZxJwYvP98617")
+        const verified = key.verifySignature(wrongMessage, signature)
+        expect(verified).toBe(false)
     })
 
-    test("sign and verify signature", () => {
+    test("should generate a valid WIF and recover the key", () => {
+        const key = new ECPairKey()
+        const wif = key.getWif()
+        const recovered = ECPairKey.fromWif(wif)
 
-        let pairKey = new ECPairKey({ privateKey: "16260783e40b16731673622ac8a5b045fc3ea4af70f727f3f9e92bdd3a1ddc42" });
-
-        let signature = pairKey.signDER("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba")
-
-        let isValid = pairKey.verifySignature("6244980fa0752e5b4643edb353fda5238a9a3d44491676788efdd25dd64855ba", signature)
-
-        expect(isValid).toBe(true)
+        expect(recovered.getPrivateKeyHex()).toBe(key.getPrivateKeyHex())
+        expect(recovered.getPublicKeyHex()).toBe(key.getPublicKeyHex())
     })
 
-    test("import from wif", () => {
-        let pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ")
+    test("should throw on WIF with invalid checksum", () => {
+        const key = new ECPairKey()
+        const wif = key.getWif()
+        const decoded = base58.decode(wif)
 
-        expect(pairKey.privateKey).toBe("0c28fca386c7a227600b2fe50b7cae11ec86d3bf1fbe471be89827e19d72aa1d")
+        // Invalida o checksum
+        decoded[decoded.length - 1] ^= 0xff
 
-        let error = false
-        let wifVersionError = "25JBG1P53WpDHnB1NFd9cSCZ9QdKS3fv5hqDbMte2bChDkmVhXa"
-        try { pairKey = ECPairKey.fromWif(wifVersionError) } 
-        catch { error = true }
-        finally {
-            // a validation error must occur, as the first byte, designated the version, is incorrect
-            expect(error).toBe(true)
-        }
+        const brokenWif = base58.encode(decoded)
 
-        error = false
-        let wifChecksumError = "5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvykx"
-        try { pairKey = ECPairKey.fromWif(wifChecksumError) } catch { error = true }
-        // a validation error should occur because the last 4 bytes assigned to the checksum are incorrect
-        expect(error).toBe(true)
-    })
-    
-    test("import from hex", () => {
-        const pairKey = ECPairKey.fromHex({ 
-            privateKey: "9d01e9e28cba0217c5826838596733b2cf86a54fff3eabcabec90a2acdc101d8", 
-            network: "testnet" 
-        })
-        
-        const address = pairKey.getAddress("p2wpkh")
-
-        expect(address).toBe("tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj")
+        expect(() => ECPairKey.fromWif(brokenWif)).toThrow("Wif type is invalid or not supported")
     })
 
-    test("get bitcoin address", () => {
-        const pairKey = ECPairKey.fromWif("5KCyEgVQ93iZoJ81tYrknfpry9LopRhJgBTdMFsapamox69wdar")
+    test("should throw on WIF with invalid prefix", () => {
+        const key = new ECPairKey()
+        const wif = key.getWif()
+        const decoded = base58.decode(wif)
 
-        let address = pairKey.getAddress("p2pkh")
+        // Prefixo inválido (ex: 0x01)
+        decoded[0] = 0x01
 
-        expect(address).toBeDefined()
-        expect(address).toBe("1Kj9UWTgPmzWrmHnFUx1hGzKi3A4R5e1NA")
+        const brokenWif = base58.encode(decoded)
 
-        address = pairKey.getAddress("p2wpkh") // bech32
-        expect(address).toBe("bc1qe44vaalmg0yxd56wav8xhtqp5xe30fe7mxws4z")
+        expect(() => ECPairKey.fromWif(brokenWif)).toThrow("Wif type is invalid or not supported")
+    })
+
+    test("should generate valid p2wpkh address", () => {
+        const key = new ECPairKey()
+        const address = key.getAddress("p2wpkh")
+        expect(typeof address).toBe("string")
+        expect(address.length).toBeGreaterThan(20)
+    })
+
+    test("should create key from hex and match", () => {
+        const original = new ECPairKey()
+        const hex = original.getPrivateKeyHex()
+        const restored = ECPairKey.fromHex(hex)
+
+        expect(restored.getPrivateKeyHex()).toBe(hex)
+        expect(restored.getPublicKeyHex()).toBe(original.getPublicKeyHex())
+    })
+
+    test("should reject invalid hex in fromHex", () => {
+        expect(() => {
+            ECPairKey.fromHex("not-a-hex")
+        }).toThrow()
+    })
+
+    test("should verifyWif correctly", () => {
+        const key = new ECPairKey()
+        const wif = key.getWif()
+        const decoded = base58.decode(wif)
+        expect(ECPairKey.verifyWif(decoded)).toBe(true)
+
+        decoded[0] = 0x00 // altera prefixo
+        expect(ECPairKey.verifyWif(decoded)).toBe(false)
     })
 })

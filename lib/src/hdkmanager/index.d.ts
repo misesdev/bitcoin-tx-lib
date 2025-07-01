@@ -1,3 +1,4 @@
+import { HDKey } from "@scure/bip32";
 import { ECPairKey } from "../ecpairkey";
 import { BNetwork } from "../types";
 interface HDKParams {
@@ -5,10 +6,14 @@ interface HDKParams {
     coinType?: number;
     account?: number;
     change?: number;
-    masterSeed: Uint8Array;
+    rootKey: HDKey;
+}
+export interface PathOptions {
+    account?: number;
+    change?: number;
 }
 /**
- * Manages BIP44 HD wallet derivation from a master seed or mnemonic.
+ * Manages BIP44 HD keys derivation from a master seed or mnemonic.
  */
 export declare class HDKManager {
     /** BIP44 purpose field (default: 44) */
@@ -20,7 +25,7 @@ export declare class HDKManager {
     /** BIP44 change value: 0 for external, 1 for internal (default: 0) */
     change: number;
     /** Root HD key derived from the master seed */
-    private readonly root;
+    private readonly _rootKey;
     /**
      * Creates a new HDKManager from a master seed.
      * @param params Object containing master seed and optional BIP44 path values.
@@ -30,7 +35,7 @@ export declare class HDKManager {
      * Instantiates HDKManager from a hex-encoded master seed.
      * @param seed Hex string master seed.
      */
-    static fromMasterSeed(seed: string): HDKManager;
+    static fromMasterSeed(masterSeed: Uint8Array): HDKManager;
     /**
      * Instantiates HDKManager from a BIP39 mnemonic phrase.
      * @param mnemonic Mnemonic phrase.
@@ -38,16 +43,36 @@ export declare class HDKManager {
      */
     static fromMnemonic(mnemonic: string, password?: string): HDKManager;
     /**
+     * Creates an instance from an extended private key (xpriv).
+     */
+    static fromXPriv(xpriv: string, pathParams?: Omit<HDKParams, 'masterSeed' | 'rootKey'>): HDKManager;
+    /**
+     * Creates an instance from an extended public key (xpub).
+     * Only public derivation will be available.
+     */
+    static fromXPub(xpub: string, pathParams?: Omit<HDKParams, 'masterSeed' | 'rootKey'>): HDKManager;
+    /**
      * Derives a private key from the BIP44 path ending with the given index.
      * @param index Index in the derivation path.
      * @returns Raw private key as Uint8Array.
      */
-    derivatePrivateKey(index: number): Uint8Array;
+    derivatePrivateKey(index: number, pathOptions?: PathOptions): Uint8Array;
+    /**
+     * Derives a public key from the BIP44 path ending with the given index.
+     * @param index Index in the derivation path.
+     * @returns Raw public key as Uint8Array.
+     */
+    derivatePublicKey(index: number, pathOptions?: PathOptions): Uint8Array;
     /**
      * Derives multiple private keys from indexes 0 to quantity - 1.
      * @param quantity Number of keys to derive.
      */
-    deriveMultiplePrivateKeys(quantity: number): Uint8Array[];
+    deriveMultiplePrivateKeys(quantity: number, pathOptions?: PathOptions): Uint8Array[];
+    /**
+     * Derives multiple private keys from indexes 0 to quantity - 1.
+     * @param quantity Number of keys to derive.
+     */
+    deriveMultiplePublicKeys(quantity: number, pathOptions?: PathOptions): Uint8Array[];
     /**
      * Derives an ECPairKey from a private key at a specific index.
      * @param index Index in the derivation path.
@@ -55,7 +80,7 @@ export declare class HDKManager {
      */
     derivatePairKey(index: number, options?: {
         network?: BNetwork;
-    }): ECPairKey;
+    }, pathOptions?: PathOptions): ECPairKey;
     /**
      * Derives multiple ECPairKeys for indexes 0 to quantity - 1.
      * @param quantity Number of pair keys to derive.
@@ -63,11 +88,25 @@ export declare class HDKManager {
      */
     derivateMultiplePairKeys(quantity: number, options?: {
         network?: BNetwork;
-    }): ECPairKey[];
+    }, pathOptions?: PathOptions): ECPairKey[];
     /**
      * Returns the full BIP44 derivation path for a given index.
      * @param index Index to complete the path.
      */
-    getDerivationPath(index: number): string;
+    getDerivationPath(index: number, pathOptions?: PathOptions): string;
+    /**
+     * Checks if the current root key has a private key.
+     */
+    hasPrivateKey(): boolean;
+    /**
+     * Return the master private key if exists(not imported from xpub)
+     */
+    getMasterPrivateKey(): Uint8Array;
+    /**
+     * Return the master public key
+     */
+    getMasterPublicKey(): Uint8Array;
+    getXPriv(): string;
+    getXPub(): string;
 }
 export {};

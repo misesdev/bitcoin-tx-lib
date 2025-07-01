@@ -129,13 +129,13 @@ export class Transaction extends BaseTransaction {
 
         let sigHash = String(hash256(hexTransaction)) // hash256 -> sha256(sha256(content))
 
-        let signature = String(this.pairKey.signDER(sigHash)) 
+        let signature = bytesToHex(this.pairKey.signDER(hexToBytes(sigHash))) 
 
         signature += String(numberToHexLE(OP_CODES.SIGHASH_ALL, 8, "hex"))
 
         let signatureLength = String(numberToHex(getBytesCount(signature), 8, "hex"))
         
-        let publicKey = this.pairKey.getPublicKeyCompressed("hex")
+        let publicKey = bytesToHex(this.pairKey.getPublicKey())
         let publicKeyLength = String(numberToHex(getBytesCount(publicKey), 8, "hex"))
         
         let scriptSig = signatureLength.concat(signature, publicKeyLength, publicKey)
@@ -181,13 +181,14 @@ export class Transaction extends BaseTransaction {
 
         let sigHash = String(hash256(hexTransaction))  // hash256 -> sha256(sha256(content))
 
-        let signature = String(this.pairKey.signDER(sigHash))
+        let signature = bytesToHex(this.pairKey.signDER(hexToBytes(sigHash)))
 
         signature += String(numberToHex(OP_CODES.SIGHASH_ALL, 8, "hex"))
         
         let signatureLength = String(numberToVarTnt(getBytesCount(signature), "hex"))
        
-        let publicKey = this.pairKey.getPublicKeyCompressed("hex")
+        let publicKey = bytesToHex(this.pairKey.getPublicKey())
+        
         let publicKeyLength = String(numberToVarTnt(getBytesCount(publicKey), "hex"))
 
         let itemCount = String(numberToHex(2, 8, "hex")) // 2 items(signature & pubkey) 0x02
@@ -229,7 +230,7 @@ export class Transaction extends BaseTransaction {
         // discount the size of the witness fields and multiply by 4
         let transactionSize = getBytesCount(hexTransaction)
         transactionSize = (transactionSize - (witnessSize + witnessMK)) * 4 
-        transactionSize = transactionSize + (witnessSize + witnessMK) // * 1
+        transactionSize += (witnessSize + witnessMK) // * 1
         
         return Math.ceil(transactionSize)
     }

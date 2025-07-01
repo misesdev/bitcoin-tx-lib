@@ -102,39 +102,61 @@ export class HDWallet
      * @param options Address type options (p2wpkh, p2pkh, etc).
      * @param pathOptions Optional derivation path configuration.
      */
-    public listAddresses(quantity: number, options?: { type: TypeAddress }, pathOptions?: PathOptions) : string[]
+    public listAddresses(quantity: number, type: TypeAddress, pathOptions?: PathOptions) : string[]
     {
         if(this.isWatchOnly) {
             return this._hdkManager.deriveMultiplePublicKeys(quantity, pathOptions)
                 .map(pubkey => Address.fromPubkey({
                     pubkey: bytesToHex(pubkey),
-                    type: options?.type ?? defaultTypeAddress
+                    type: type ?? defaultTypeAddress
                 }))
         }
 
         return this._hdkManager.derivateMultiplePairKeys(quantity, {
                 network: this.network 
             }, pathOptions)
-            .map(pair => pair.getAddress(options?.type ?? defaultTypeAddress))
+            .map(pair => pair.getAddress(type))
+    }
+
+    /**
+     * Returns a list of external (receiving) addresses as per BIP44.
+     * @param quantity Number of addresses to return.
+     * @param type Address type options (p2wpkh, p2pkh, etc).
+     * @param account Account index (default is 0).
+     */
+    public listReceiveAddresses(quantity: number, type: TypeAddress, account: number = 0) 
+    {
+        return this.listAddresses(quantity, type, { account, change: 0 })
+    }
+
+    /**
+     * Returns a list of internal (change) addresses as per BIP44.
+     * @param quantity Number of addresses to return.
+     * @param type Address type options (p2wpkh, p2pkh, etc).
+     * @param account Account index (default is 0).
+     */
+    public listChangeAddresses(quantity: number, type: TypeAddress, account: number = 0) 
+    {
+        return this.listAddresses(quantity, type, { account, change: 1 })
     }
 
     /**
      * Derives a single address by index.
      */
-    public getAddress(index: number, options?: { type: TypeAddress }, pathOptions?: PathOptions) : string
+    public getAddress(index: number, type: TypeAddress, pathOptions?: PathOptions) : string
     {
         if(this.isWatchOnly) 
         {
             const pubkey = this._hdkManager.derivatePublicKey(index, pathOptions)
             return Address.fromPubkey({ 
                 pubkey: bytesToHex(pubkey),
-                type: options?.type ?? defaultTypeAddress,
+                type: type ?? defaultTypeAddress,
                 network: this.network,
             })
         }
 
         return this.getPairKey(index, pathOptions)
-            .getAddress(options?.type ?? defaultTypeAddress)
+            .getAddress(type ?? defaultTypeAddress)
     }
 
     /** Returns the master private key in base58 (xprv). */
@@ -187,5 +209,12 @@ export class HDWallet
     public getXPub() : string 
     {
         return this._hdkManager.getXPub()
+    }
+    
+    public getWif() : string
+    {
+        const pairkey = ECPairKey.fromHex(bytesToHex(this.getMasterPrivateKey()),this.network)
+
+        return pairkey.getWif()
     }
 }

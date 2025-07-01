@@ -1,149 +1,137 @@
-const Ecc = require('elliptic').ec
-import { Base58 } from "./base/base58";
-import { BNetwork, ECOptions, Hex, TypeAddress } from "./types"
-import { bytesToHex, checksum, hexToBytes, numberToHex, ripemd160 } from "./utils";
+import { BNetwork, ECOptions, TypeAddress } from "./types"
+import { bytesToHex, checksum, hexToBytes } from "./utils";
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { Address } from "./utils/address";
-import { SignatureType } from "@noble/curves/abstract/weierstrass";
+import { base58 } from "@scure/base";
 
 export class ECPairKey {
 
-    public privateKey: string;
-    public network: BNetwork = "mainnet"
-    public cipherCurve = "secp256k1"
+    public readonly network: BNetwork
+    public readonly privateKey: Uint8Array
     // the byte 0x80 is prefix for mainnet and 0xef is prefix for testnet
-    static wifPrefixes = { "mainnet": 0x80, "testnet": 0xef }
-    // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
-    public addressPrefix = { "mainnet": 0x00, "testnet": 0x6f }
-
-    private elliptic = new Ecc(this.cipherCurve ?? "secp256k1")
+    static wifPrefixes = { mainnet: 0x80, testnet: 0xef }
 
     constructor(options?: ECOptions) {
         this.network = options?.network ?? "mainnet"
-        this.privateKey = options?.privateKey ?? this.elliptic.genKeyPair().getPrivate("hex")
+        this.privateKey = options?.privateKey ?? secp256k1.utils.randomPrivateKey() 
     }
 
-    public getPublicKey(): string {
-
-        const keyPair = this.elliptic.keyFromPrivate(this.privateKey)
-
-        const pubPoint = keyPair.getPublic()
-
-        return pubPoint.encode("hex")
+    /**
+    * Returns the compressed public key derived from the private key.
+    */
+    public getPublicKey(): Uint8Array 
+    {
+        return secp256k1.getPublicKey(this.privateKey, true)
     }
 
-    public getPublicKeyCompressed(type: "hex"|"base58" = "base58"): string {
-
-        let publicKey = this.getPublicKey()
-
-        let coordinateX = publicKey.substring(2, 66)
-        let coordinateY = publicKey.substring(66)
-
-        const lastByteY = parseInt(coordinateY.slice(-2), 16)
-        const prefix = (lastByteY % 2 === 0) ? "02" : "03"
-
-        // The prefix byte 0x02 is due to the fact that the key refers to the X coordinate of the curve
-        let publicKeyCompressed =  prefix + coordinateX 
-
-        if(type == "hex") return publicKeyCompressed
-
-        return Base58.encode(publicKeyCompressed)
+    public getPrivateKey() : Uint8Array 
+    {
+        return this.privateKey
     }
-
-    public signDER(messageHash: Hex) : Hex {
-        
-        let data = messageHash
-
-        if(typeof(messageHash) !== "object") data = hexToBytes(messageHash)
-      
+    
+    /**
+    * Signs a message hash and returns the DER-encoded signature.
+    * @param message Hash of the message to sign.
+    */
+    public signDER(message: Uint8Array) : Uint8Array 
+    {
         // generate signatures until it is small
-        while(true) {
-            let signature : SignatureType = secp256k1.sign(data, this.privateKey, { extraEntropy: true })
-
-            if(signature.hasHighS()) signature.normalizeS()
-            
-            if(signature.toDERRawBytes()[1] == 0x44) 
-                return signature.toDERHex()
+        while(true)
+        {
+            let signature = secp256k1.sign(message, this.privateKey, { 
+                extraEntropy: true, 
+                lowS: true 
+            })
+            signature.normalizeS()
+            let derSignature = signature.toDERRawBytes()
+            if(derSignature.length == 70) 
+                return derSignature
         }
     }
-
-    public verifySignature(messageHash: Hex, derSignature: Hex): boolean {
-
-        let message = messageHash
-        let signature = derSignature
-
-        if(typeof(messageHash) !== "string")
-            message = bytesToHex(messageHash)
-        if(typeof(derSignature) !== "string")
-            signature = bytesToHex(derSignature)
-
-        return secp256k1.verify(signature, message, this.getPublicKeyCompressed("hex"))
+    
+    /**
+    * Verifies a DER-encoded signature against a message hash.
+    * @param message Message hash that was signed.
+    * @param signature Signature in DER format.
+    */
+    public verifySignature(message: Uint8Array, signature: Uint8Array): boolean
+    {
+        return secp256k1.verify(signature, message, this.getPublicKey())
     }
 
-    public getWif(): string {
-
-        // the byte 0x80 is prefix for mainnet and 0xef is prefix for testnet
-        let prefix = numberToHex(ECPairKey.wifPrefixes[this.network], 8, "hex")
-
-        let privateWif = prefix + this.privateKey
-
-        let check = checksum(privateWif)
-
-        let wif = privateWif + check
-
-        return Base58.encode(wif)
+    /**
+    * Returns the WIF (Wallet Import Format) of the private key.
+    * @param compressed Whether to append 0x01 to indicate compressed public key.
+    */
+    public getWif(): string
+    {
+        const prefix = ECPairKey.wifPrefixes[this.network]
+        const payload = new Uint8Array([prefix, ...this.privateKey])
+        const check = checksum(payload) as Uint8Array
+        const privateWif = new Uint8Array([...payload, ...check])
+        return base58.encode(privateWif)
     }
-
-    public getPublicWif(): string {
-
-        // 0x80 is prefix for mainnet and 0xef is byte prefix for testnet
-        let prefix = numberToHex(ECPairKey.wifPrefixes[this.network], 8, "hex")
-
-        // the 0x01 byte added at the end indicates that it is a compressed public key (doc: https://en.bitcoin.it/wiki/Wallet_import_format)
-        let publicWif = prefix + this.privateKey + "01"
-
-        let check = checksum(publicWif)
-
-        let wif = publicWif + check
-
-        return Base58.encode(wif)
-    }
-
-    public getAddress(type: TypeAddress = "p2wpkh"): string {
-
-        let pubkey = this.getPublicKeyCompressed("hex")
-
+    
+    /**
+   * Returns the address associated with the compressed public key.
+   * @param type Type of address to generate (p2pkh, p2wpkh, etc).
+   */
+    public getAddress(type: TypeAddress = "p2wpkh"): string 
+    {
+        let pubkey = bytesToHex(this.getPublicKey())
         return Address.fromPubkey({ pubkey, type, network: this.network })
     }
 
-    static fromWif(wif: string, options?: ECOptions): ECPairKey {
+    /**
+    * Creates a key pair from a WIF string.
+    * @param wif Wallet Import Format string.
+    * @param options Optional network override.
+    */
+    static fromWif(wif: string): ECPairKey 
+    {
+        const decoded = base58.decode(wif)
+        
+        if (!this.verifyWif(decoded))
+            throw new Error("Wif type is invalid or not supported, only private key wif are suported")
+        
+        const keyBytes = decoded.slice(1, 33)
+        
+        const network: BNetwork = (decoded[0] === this.wifPrefixes.mainnet ? "mainnet" : "testnet")
 
-        let wifHex = Base58.decode(wif)
-
-        if (!this.verifyWif(wifHex))
-        throw new Error("Wif type is not supported, only private key wif are suported.")
-
-        return new ECPairKey({ privateKey: wifHex.substring(2, wifHex.length - 8), network: options?.network });
+        return new ECPairKey({ privateKey: keyBytes, network })
     }
 
-    static fromHex({ privateKey, network="mainnet" }: ECOptions) {
-        return new ECPairKey({ privateKey, network })
+    /**
+    * Creates a key pair from a raw private key.
+    */
+    static fromHex(privateKey: string, network:BNetwork = "mainnet") : ECPairKey 
+    {
+        return new ECPairKey({ privateKey: hexToBytes(privateKey), network })
     }
 
-    static verifyWif(wifHex: string): boolean {
+    /**
+    * Verifies if a WIF string (decoded) has valid prefix and checksum.
+    * @param bytes WIF decoded into bytes.
+    */
+    static verifyWif(decoded: Uint8Array): boolean 
+    {
+        const prefix = decoded[0]
+        const isValidPrefix = Object.values(this.wifPrefixes).includes(prefix)
+        if (!isValidPrefix) return false
+        
+        const payload = decoded.slice(0, -4)
+        const providedChecksum = decoded.slice(-4)
+        const validChecksum = checksum(payload)
 
-        let bytes = hexToBytes(wifHex)
+        return providedChecksum.every((b, i) => b === validChecksum[i])
+    }
 
-        // In hex [0x80]
-        if (![this.wifPrefixes.mainnet, this.wifPrefixes.testnet].includes(bytes[0])) return false
+    public getPrivateKeyHex(): string {
+        return bytesToHex(this.privateKey)
+    }
 
-        let checksumBytes = bytes.slice(bytes.length - 4, bytes.length) //wifHex.substring(wifHex.length - 8)
-
-        let checksumHash = checksum(bytes.slice(0, bytes.length - 4))//wifHex.substring(0, wifHex.length - 8)
-
-        if (checksumHash.toString() !== checksumBytes.toString()) return false;
-
-        return true
+    public getPublicKeyHex(): string {
+        return bytesToHex(this.getPublicKey())
     }
 }
 
