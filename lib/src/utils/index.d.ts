@@ -1,6 +1,6 @@
 import { Hex } from "../types";
 export type Response = "hex" | "bytes";
-export declare function bytesToHex(bytes: Hex): string;
+export declare function bytesToHex(bytes: Uint8Array): string;
 export declare function hexToBytes(hex: string, hexadecimal?: boolean): Uint8Array;
 export declare function sha256(messageHash: Hex, hash256?: boolean): Hex;
 export declare function hash256(message: Hex): Hex;
