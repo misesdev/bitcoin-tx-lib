@@ -14,6 +14,7 @@ with no reliance on native modules.
   - [Transaction](#transaction)
   - [Network fee](#network-fee)
 - [How to use Hierarchical Deterministic Keys](hdkmanager.md)
+- [How to use HD Wallet functions](hdwallet.md)
 
 ## Install 
 

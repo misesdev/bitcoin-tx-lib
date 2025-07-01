@@ -12,6 +12,10 @@ interface HDKParams {
     rootKey: HDKey;
 }
 
+export interface PathOptions {
+    account?: number;
+    change?: number;
+}
 /**
  * Manages BIP44 HD keys derivation from a master seed or mnemonic.
  */
@@ -90,12 +94,14 @@ export class HDKManager {
      * @param index Index in the derivation path.
      * @returns Raw private key as Uint8Array.
      */
-    public derivatePrivateKey(index: number) : Uint8Array 
+    public derivatePrivateKey(index: number, pathOptions?: PathOptions) : Uint8Array 
     {
+        if(!this.hasPrivateKey())
+            throw new Error("Missing private key")
         if (index < 0 || index > 2147483647) 
             throw new Error("Invalid derivation index");
 
-        let path = this.getDerivationPath(index)
+        let path = this.getDerivationPath(index, pathOptions)
         let child = this._rootKey.derive(path)
 
         if (!child.privateKey) 
@@ -105,10 +111,50 @@ export class HDKManager {
     }
 
     /**
+     * Derives a public key from the BIP44 path ending with the given index.
+     * @param index Index in the derivation path.
+     * @returns Raw public key as Uint8Array.
+     */
+    public derivatePublicKey(index: number, pathOptions?: PathOptions) : Uint8Array 
+    {
+        if (index < 0 || index > 2147483647) 
+            throw new Error("Invalid derivation index");
+
+        let path = this.getDerivationPath(index, pathOptions)
+        let child = this._rootKey.derive(path)
+
+        if (!child.publicKey) 
+            throw new Error(`Missing public key at path ${path}`);
+
+        return child.publicKey;
+    }
+
+    /**
      * Derives multiple private keys from indexes 0 to quantity - 1.
      * @param quantity Number of keys to derive.
      */
-    public deriveMultiplePrivateKeys(quantity: number) : Uint8Array[]
+    public deriveMultiplePrivateKeys(quantity: number, pathOptions?: PathOptions) : Uint8Array[]
+    {
+        if(!this.hasPrivateKey())
+            throw new Error("Missing private key")
+        
+        let result: Uint8Array[] = []
+
+        for(let i = 0; i < quantity; i++)
+        {
+            if (i < 0 || i > 2147483647) 
+                throw new Error("Invalid derivation index");
+            result.push(this.derivatePrivateKey(i, pathOptions))
+        }
+
+        return result;    
+    }
+
+    /**
+     * Derives multiple private keys from indexes 0 to quantity - 1.
+     * @param quantity Number of keys to derive.
+     */
+    public deriveMultiplePublicKeys(quantity: number, pathOptions?: PathOptions) : Uint8Array[]
     {
         let result: Uint8Array[] = []
 
@@ -116,7 +162,7 @@ export class HDKManager {
         {
             if (i < 0 || i > 2147483647) 
                 throw new Error("Invalid derivation index");
-            result.push(this.derivatePrivateKey(i))
+            result.push(this.derivatePublicKey(i, pathOptions))
         }
 
         return result;    
@@ -127,12 +173,15 @@ export class HDKManager {
      * @param index Index in the derivation path.
      * @param options with network Network: 'mainnet' or 'testnet' (default: mainnet).
      */
-    public derivatePairKey(index: number, options?: { network?: BNetwork }) : ECPairKey
+    public derivatePairKey(index: number, options?: { network?: BNetwork }, pathOptions?: PathOptions) : ECPairKey
     {
+        if(!this.hasPrivateKey())
+            throw new Error("Missing private key")
+        
         if (index < 0 || index > 2147483647) 
             throw new Error("Invalid derivation index");
         
-        let privateKey = bytesToHex(this.derivatePrivateKey(index))
+        let privateKey = bytesToHex(this.derivatePrivateKey(index, pathOptions))
 
         return ECPairKey.fromHex({ privateKey, network: options?.network ?? "mainnet" })
     }
@@ -142,14 +191,17 @@ export class HDKManager {
      * @param quantity Number of pair keys to derive.
      * @param network Network: 'mainnet' or 'testnet' (default: mainnet).
      */
-    public derivateMultiplePairKeys(quantity: number, options?: { network?: BNetwork }) : ECPairKey[]
+    public derivateMultiplePairKeys(quantity: number, options?: { network?: BNetwork }, pathOptions?: PathOptions) : ECPairKey[]
     {
+        if(!this.hasPrivateKey())
+            throw new Error("Missing private key")
+        
         let result: ECPairKey[] = []
         for(let i = 0; i < quantity; i++)
         {
             if (i < 0 || i > 2147483647) 
                 throw new Error("Invalid derivation index");
-            result.push(this.derivatePairKey(i, { network: options?.network ?? "mainnet" }))
+            result.push(this.derivatePairKey(i, { network: options?.network ?? "mainnet" }, pathOptions))
         }
         return result
     }
@@ -158,12 +210,22 @@ export class HDKManager {
      * Returns the full BIP44 derivation path for a given index.
      * @param index Index to complete the path.
      */
-    public getDerivationPath(index: number) 
+    public getDerivationPath(index: number, pathOptions?: PathOptions) 
     {
         if (index < 0 || index > 2147483647) 
             throw new Error("Invalid derivation index");
-       
-        return `m/${this.purpose}'/${this.coinType}'/${this.account}'/${this.change}/${index}`
+      
+        // In watch only (imported from xpub) derive only this path
+        if(!this.hasPrivateKey())
+            return `m/${pathOptions?.change ?? this.change}/${index}`
+
+        // If have an a private key derive from hardened path
+        return `
+            m/${this.purpose}'
+            /${this.coinType}'
+            /${pathOptions?.account ?? this.account}'
+            /${pathOptions?.change ?? this.change}
+            /${index}`.replace(/\s+/g, "")
     }
 
     /**
@@ -172,5 +234,37 @@ export class HDKManager {
     public hasPrivateKey() 
     {
         return !!this._rootKey.privateKey
+    }
+    
+    /**
+     * Return the master private key if exists(not imported from xpub)
+     */
+    public getMasterPrivateKey() : Uint8Array 
+    {
+        if(!this._rootKey.privateKey)
+            throw new Error("Missing private key")
+        return this._rootKey.privateKey
+    }
+
+    /**
+     * Return the master public key 
+     */
+    public getMasterPublicKey() : Uint8Array
+    {
+        if(!this._rootKey.publicKey)
+            throw new Error("Missing public key")
+        return this._rootKey.publicKey
+    }
+
+    public getXPriv() : string 
+    {
+        if(!this.hasPrivateKey())
+            throw new Error("Missing private key")
+        return this._rootKey.privateExtendedKey
+    }
+
+    public getXPub() : string 
+    {
+        return this._rootKey.publicExtendedKey
     }
 }
