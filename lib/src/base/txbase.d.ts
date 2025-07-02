@@ -12,5 +12,5 @@ export declare abstract class BaseTransaction {
     constructor(pairKey: ECPairKey);
     addInput(input: InputTransaction): void;
     addOutput(output: OutputTransaction): void;
-    outputsRaw(): string;
+    outputsRaw(): Uint8Array;
 }

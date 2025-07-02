@@ -45,7 +45,7 @@ export class Bech32 {
 
     public getAddress(): string {
 
-        let sha2 = sha256(this.publicKey)
+        let sha2 = sha256(hexToBytes(this.publicKey))
 
         let ripemd = ripemd160(sha2)
 

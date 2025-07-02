@@ -1,10 +1,11 @@
 import { BaseTransaction } from "./base/txbase";
 import { OP_CODES } from "./constants/opcodes";
 import { ECPairKey } from "./ecpairkey";
-import { bytesToHex, getBytesCount, hash256, hexToBytes, numberToHex, numberToHexLE,
-    numberToVarTnt, reverseEndian } from "./utils";
+import { bytesToHex, hash256, hexToBytes, numberToHex, numberToHexLE,
+    numberToVarTnt } from "./utils";
 import { scriptPubkeyToScriptCode } from "./utils/txutils";
-import { Hex, InputTransaction } from "./types";
+import { InputTransaction } from "./types";
+import { ByteBuffer } from "./utils/buffer";
 
 type BuildFormat = "raw" | "txid"
 
@@ -52,152 +53,147 @@ export class Transaction extends BaseTransaction {
         }
     }
 
-    public build(format: BuildFormat = "raw"): string 
+    public build(format: BuildFormat = "raw"): Uint8Array 
     {    
-        let witnessData: string = ""
+        let witnessData = new ByteBuffer()
         
-        let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
+        let hexTransaction = new ByteBuffer(numberToHexLE(this.version, 32)) // version
 
         if(this.isSegwit() && format != "txid") // Marker and Flag for SegWit transactions
-            hexTransaction += bytesToHex(new Uint8Array([0x00, 0x01])) //"00" + "01";
+            hexTransaction.append(new Uint8Array([0x00, 0x01])) //"00" + "01";
 
-        hexTransaction += String(numberToVarTnt(this.inputs.length, "hex")) // number of inputs
+        // number of inputs
+        hexTransaction.append(numberToVarTnt(this.inputs.length))
         
         this.inputs.forEach(input => {
-            hexTransaction += reverseEndian(input.txid) // txid
-            hexTransaction += String(numberToHexLE(input.vout, 32, "hex")) // index output (vout)
+            hexTransaction.append(hexToBytes(input.txid).reverse()) // txid
+            hexTransaction.append(numberToHexLE(input.vout, 32)) // index output (vout)
 
             if(this.isSegwitInput(input)) {
-                witnessData += String(this.generateWitness(input, "hex"))
-                hexTransaction += "00" // script sig in witness area // P2WPKH 
+                witnessData.append(this.generateWitness(input))
+                hexTransaction.append(new Uint8Array([0])) // script sig in witness area // P2WPKH 
             } else {
-                let scriptSig = String(this.generateScriptSig(input, "hex"))
-                let scriptSigLength = String(numberToHexLE(getBytesCount(scriptSig), 8, "hex"))
-                hexTransaction += scriptSigLength.concat(scriptSig)
-                witnessData += "00" // no witness, only scriptSig
+                let scriptSig = this.generateScriptSig(input)
+                hexTransaction.append(numberToHexLE(scriptSig.length, 8))
+                hexTransaction.append(scriptSig)
+                witnessData.append(new Uint8Array([0])) // no witness, only scriptSig
             }
             // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
-            hexTransaction += input.sequence ?? reverseEndian("fffffffd") // 0xfffffffd
+            hexTransaction.append(hexToBytes(input.sequence??"fffffffd").reverse()) // 0xfffffffd
         })
 
-        hexTransaction += String(numberToVarTnt(this.outputs.length, "hex")) // number of outputs
+        hexTransaction.append(numberToVarTnt(this.outputs.length)) // number of outputs
 
-        hexTransaction += this.outputsRaw() // amount+scriptpubkey
+        hexTransaction.append(this.outputsRaw()) // amount+scriptpubkey
 
-        if(this.isSegwit() && format != "txid") hexTransaction += witnessData
+        if(this.isSegwit() && format != "txid") hexTransaction.append(witnessData.raw())
 
-        hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
+        hexTransaction.append(numberToHexLE(this.locktime, 32)) // locktime
 
-        return hexTransaction
+        return hexTransaction.raw()
     }
 
     public getTxid(): string 
     {    
         let hexTransaction = this.build("txid")
         
-        let hash = String(hash256(hexTransaction))
+        let txid = hash256(hexTransaction).reverse()
 
-        return String(reverseEndian(hash))
+        return bytesToHex(txid)
     }
 
-    private generateScriptSig(inputSig: InputTransaction, resultType: "hex"|"bytes") : Hex
+    private generateScriptSig(inputSig: InputTransaction) : Uint8Array
     {
-        let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
+        let hexTransaction = new ByteBuffer(numberToHexLE(this.version, 32)) // version
 
-        hexTransaction += String(numberToVarTnt(this.inputs.length, "hex")) // number of inputs
+        hexTransaction.append(numberToVarTnt(this.inputs.length)) // number of inputs
 
         this.inputs.forEach(input => {
-            hexTransaction += String(reverseEndian(input.txid)) // txid
-            hexTransaction += String(numberToHexLE(input.vout, 32, "hex")) // index output (vout)
+            hexTransaction.append(hexToBytes(input.txid).reverse()) // txid
+            hexTransaction.append(numberToHexLE(input.vout, 32)) // index output (vout)
             if(input.txid === inputSig.txid) {
-                let scriptLength = hexToBytes(input.scriptPubKey).length
-                hexTransaction += String(numberToVarTnt(scriptLength, "hex"))
-                hexTransaction += input.scriptPubKey
+                let script = hexToBytes(input.scriptPubKey)
+                hexTransaction.append(numberToVarTnt(script.length))
+                hexTransaction.append(script)
             } else
-                hexTransaction += "00" // length 0x00 to sign
+                hexTransaction.append(new Uint8Array([0])) // length 0x00 to sign
             // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
-            hexTransaction += input.sequence ?? reverseEndian("fffffffd") 
+            hexTransaction.append(hexToBytes(input.sequence??"fffffffd").reverse()) 
         })
 
-        hexTransaction += String(numberToVarTnt(this.outputs.length, "hex")) // number of outputs
+        hexTransaction.append(numberToVarTnt(this.outputs.length)) // number of outputs
 
-        hexTransaction += this.outputsRaw()
+        hexTransaction.append(this.outputsRaw())
 
-        hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
+        hexTransaction.append(numberToHexLE(this.locktime, 32)) // locktime
 
-        hexTransaction += String(numberToHexLE(OP_CODES.SIGHASH_ALL, 32, "hex"))
+        hexTransaction.append(numberToHexLE(OP_CODES.SIGHASH_ALL, 32))
 
-        let sigHash = String(hash256(hexTransaction)) // hash256 -> sha256(sha256(content))
+        let sigHash = hash256(hexTransaction.raw()) // hash256 -> sha256(sha256(content))
 
-        let signature = bytesToHex(this.pairKey.signDER(hexToBytes(sigHash))) 
+        let scriptSig = new ByteBuffer(this.pairKey.signDER(sigHash))
 
-        signature += String(numberToHexLE(OP_CODES.SIGHASH_ALL, 8, "hex"))
+        scriptSig.append(numberToHexLE(OP_CODES.SIGHASH_ALL, 8)) 
 
-        let signatureLength = String(numberToHex(getBytesCount(signature), 8, "hex"))
+        scriptSig.prepend(numberToHex(scriptSig.length, 8))
         
-        let publicKey = bytesToHex(this.pairKey.getPublicKey())
-        let publicKeyLength = String(numberToHex(getBytesCount(publicKey), 8, "hex"))
-        
-        let scriptSig = signatureLength.concat(signature, publicKeyLength, publicKey)
+        let publicKey = this.pairKey.getPublicKey()
 
-        if(resultType == "hex") return scriptSig
+        scriptSig.append(numberToHex(publicKey.length, 8))
+        scriptSig.append(publicKey)
         
-        return hexToBytes(scriptSig)
+        return scriptSig.raw()
     }
 
-    private generateWitness(input: InputTransaction, resultType: "hex"|"bytes" = "hex") : Hex
+    private generateWitness(input: InputTransaction) : Uint8Array 
     {
-        let hexTransaction = String(numberToHexLE(this.version, 32, "hex")) // version
+        let hexTransaction = new ByteBuffer(numberToHexLE(this.version, 32)) // version
         // hashPrevouts
         let prevouts = this.inputs.map(input => {
-            let vout = String(numberToHexLE(input.vout, 32, "hex")) // index output (vout)
-            let txid = String(reverseEndian(input.txid)) // txid
-            return txid.concat(vout)
-        }).join("")
-        let hashPrevouts = hash256(prevouts)
-        hexTransaction += hashPrevouts
+            let build = new ByteBuffer(hexToBytes(input.txid).reverse())
+            build.append(numberToHexLE(input.vout, 32))
+            return build.raw()
+        })
+        let hashPrevouts = hash256(ByteBuffer.merge(prevouts))
+        hexTransaction.append(hashPrevouts)
         // hashSequence
-        let sequence = this.inputs.map(input => input.sequence ?? reverseEndian("fffffffd")).join("")
-        let hashSequence = hash256(sequence)
-        hexTransaction += hashSequence
+        let sequence = this.inputs.map(input => hexToBytes(input.sequence??"fffffffd").reverse())
+        let hashSequence = hash256(ByteBuffer.merge(sequence))
+        hexTransaction.append(hashSequence)
         // out point 
-        hexTransaction += String(reverseEndian(input.txid))
-        hexTransaction += String(numberToHexLE(input.vout, 32, "hex"))
+        hexTransaction.append(hexToBytes(input.txid).reverse())
+        hexTransaction.append(numberToHexLE(input.vout, 32))
         // script code
         let scriptCode = scriptPubkeyToScriptCode(input.scriptPubKey)
-        hexTransaction += scriptCode
+        hexTransaction.append(scriptCode)
         // amount
-        hexTransaction += String(numberToHexLE(input.value, 64, "hex"))
+        hexTransaction.append(numberToHexLE(input.value, 64))
         // sequence
         // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
-        hexTransaction += input.sequence ?? reverseEndian("fffffffd")
+        hexTransaction.append(hexToBytes(input.sequence??"fffffffd").reverse())
         // hashOutputs
         let hashOutputs = hash256(this.outputsRaw())
-        hexTransaction += hashOutputs
+        hexTransaction.append(hashOutputs)
 
-        hexTransaction += String(numberToHexLE(this.locktime, 32, "hex")) // locktime
+        hexTransaction.append(numberToHexLE(this.locktime, 32)) // locktime
 
-        hexTransaction += String(numberToHexLE(OP_CODES.SIGHASH_ALL, 32, "hex")) // sighash
+        hexTransaction.append(numberToHexLE(OP_CODES.SIGHASH_ALL, 32)) // sighash
 
-        let sigHash = String(hash256(hexTransaction))  // hash256 -> sha256(sha256(content))
+        let sigHash = hash256(hexTransaction.raw())  // hash256 -> sha256(sha256(content))
 
-        let signature = bytesToHex(this.pairKey.signDER(hexToBytes(sigHash)))
+        let scriptSig = new ByteBuffer(this.pairKey.signDER(sigHash))
 
-        signature += String(numberToHex(OP_CODES.SIGHASH_ALL, 8, "hex"))
+        scriptSig.append(numberToHex(OP_CODES.SIGHASH_ALL, 8))
         
-        let signatureLength = String(numberToVarTnt(getBytesCount(signature), "hex"))
+        scriptSig.prepend(numberToVarTnt(scriptSig.length))
        
-        let publicKey = bytesToHex(this.pairKey.getPublicKey())
-        
-        let publicKeyLength = String(numberToVarTnt(getBytesCount(publicKey), "hex"))
+        let publicKey = this.pairKey.getPublicKey()
+        scriptSig.append(numberToVarTnt(publicKey.length))
+        scriptSig.append(publicKey)
 
-        let itemCount = String(numberToHex(2, 8, "hex")) // 2 items(signature & pubkey) 0x02
+        scriptSig.prepend(numberToHex(2, 8)) // 2 items(signature & pubkey) 0x02
         
-        let scriptSig = itemCount.concat(signatureLength, signature, publicKeyLength, publicKey)
-        
-        if(resultType == "hex") return scriptSig
-
-        return hexToBytes(scriptSig)
+        return scriptSig.raw()
     }
 
     public isSegwit() : boolean {
@@ -224,11 +220,11 @@ export class Transaction extends BaseTransaction {
         let witnessInputs = this.inputs.filter(this.isSegwitInput)
 	    // witness size * 1
         let witnessSize = witnessInputs.reduce((sum, input) => {
-            let witness = String(this.generateWitness(input))
-            return sum + getBytesCount(witness)
+            let witness = this.generateWitness(input)
+            return sum + witness.length
         }, 0) 
         // discount the size of the witness fields and multiply by 4
-        let transactionSize = getBytesCount(hexTransaction)
+        let transactionSize = hexTransaction.length
         transactionSize = (transactionSize - (witnessSize + witnessMK)) * 4 
         transactionSize += (witnessSize + witnessMK) // * 1
         

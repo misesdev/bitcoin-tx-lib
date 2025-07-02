@@ -51,6 +51,6 @@ describe("addressToScriptPubKey", () => {
     test("convert scriptPubkey to scriptCode to signature", () => {
         const result = scriptPubkeyToScriptCode("0014a8439c50793b033df810de257b313144a8f7edc9")
 
-        expect(result).toBe("1976a914a8439c50793b033df810de257b313144a8f7edc988ac")
+        expect(bytesToHex(result)).toBe("1976a914a8439c50793b033df810de257b313144a8f7edc988ac")
     })
 });

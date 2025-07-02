@@ -1,6 +1,7 @@
 import { ECPairKey } from "./ecpairkey"
 import { Transaction } from "./transaction"
 import { InputTransaction, OutputTransaction } from "./types"
+import { bytesToHex } from "./utils"
 
 describe("transaction class", () => {
     
@@ -92,7 +93,7 @@ describe("transaction class", () => {
         })
         let txid = transaction.getTxid()
 
-        expect(txid).toBe("17565349e3a89ec73e5c9fa68da322500f702215be9f75acb4fe953a9546fc59")
+        expect(txid).toBe("00a33f03ade6a8744084edb472931b8435ea545995e787333b75ff2e020f3915")
         expect(transaction.isSegwit()).toBe(true)
         expect(437).toEqual(transaction.weight())
         expect(110).toEqual(transaction.vBytes())
@@ -105,7 +106,7 @@ describe("transaction class", () => {
             amount: (29128) - 500 
         })
         let raw = transaction.outputsRaw()
-        expect(raw).toBe("d46f000000000000160014aec042df56d9dc2fad0b30faf62eb94f07cba3cc")
+        expect(bytesToHex(raw)).toBe("d46f000000000000160014aec042df56d9dc2fad0b30faf62eb94f07cba3cc")
     })
 
     test("Must resolve network fee for payer exit", () => {

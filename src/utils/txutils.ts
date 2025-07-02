@@ -45,7 +45,7 @@ export function pubkeyToScriptCode(pubkey: string) {
     return bytesToHex(mergeUint8Arrays(scriptLength, script))
 }
 
-export function scriptPubkeyToScriptCode(script: string) : string {
+export function scriptPubkeyToScriptCode(script: string) : Uint8Array {
     const scriptPubkey = hexToBytes(script)
 
     if(scriptPubkey[0] == 0x00 && scriptPubkey[1] == 0x14) {
@@ -53,10 +53,10 @@ export function scriptPubkeyToScriptCode(script: string) : string {
         const prefixScript = new Uint8Array([OP_CODES.OP_DUP, OP_CODES.OP_HASH160, hash.length])
         const sufixScript = new Uint8Array([OP_CODES.OP_EQUALVERIFY, OP_CODES.OP_CHECKSIG])
         const scriptCode = mergeUint8Arrays(prefixScript, hash, sufixScript)
-        return bytesToHex(mergeUint8Arrays(new Uint8Array([scriptCode.length]), scriptCode))
+        return new Uint8Array([scriptCode.length, ...scriptCode])
     }
     if(scriptPubkey[0] == 0x79 && scriptPubkey[2] == 0x14) {
-        return bytesToHex(mergeUint8Arrays(new Uint8Array([scriptPubkey.length]), scriptPubkey))
+        return new Uint8Array([scriptPubkey.length, ...scriptPubkey])
     }
         
     throw new Error("scriptPubkey no segwit, expected P2WPKH")

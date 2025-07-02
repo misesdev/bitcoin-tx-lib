@@ -44,70 +44,37 @@ export function hexToBytes(hex: string, hexadecimal: boolean = true): Uint8Array
     return bytes;
 }
 
-export function sha256(messageHash: Hex, hash256: boolean = false): Hex {
+export function sha256(message: Uint8Array, hash256: boolean = false): Uint8Array {
 
-    let data = messageHash
-    
-    if(typeof(messageHash) !== "object")
-        data = hexToBytes(messageHash)
-
-    let hash: Uint8Array = sha256Noble(data)
+    let hash: Uint8Array = sha256Noble(message)
 
     // if is a hash256 return sha256(sha256(content)) (doc: https://en.bitcoin.it/wiki/BIP_0174)
     if (hash256)
         hash = sha256Noble(hash)
 
-    if(typeof(messageHash) == "string")
-        return bytesToHex(hash)
-
     return hash
 }
 
-export function hash256(message: Hex) : Hex {
-    let data = message
-    
-    if(typeof(message) !== "object")
-        data = hexToBytes(message)
-
-    const hash = sha256Noble(sha256Noble(data))
-
-    if(typeof(message) == "string")
-        return bytesToHex(hash)
-
+export function hash256(message: Uint8Array) : Uint8Array {
+    const hash = sha256Noble(sha256Noble(message))
     return hash
 }
 
-export function ripemd160(messageHash: Hex, address: boolean = false): Hex {
+export function ripemd160(message: Uint8Array, address: boolean = false): Uint8Array {
 
-    let data = messageHash
-
-    if(typeof(messageHash) !== "object")
-        data = hexToBytes(messageHash)
-
-    let hash = address ? sha256(data) : data
+    let hash = address ? sha256(message) : message
 
     hash = ripemd160Noble(hash)
     
-    if(typeof(messageHash) == "string")
-        return bytesToHex(hash)
-
     return hash
 }
 
-export function checksum(messageHash: Hex, bytes: number = 4): Hex {
+export function checksum(message: Uint8Array, bytes: number = 4): Uint8Array {
     
-    let data = messageHash
-
-    if(typeof(messageHash) !== "object")
-        data = hexToBytes(messageHash)
-
     // generate the hash256(sha256(content)) and return first 4 bytes (doc: https://en.bitcoin.it/wiki/BIP_0174)
-    let hash = sha256Noble(data)
+    let hash = sha256Noble(message)
 
     hash = sha256Noble(hash).slice(0, bytes) 
-
-    if(typeof(messageHash) == "string")
-        return bytesToHex(hash)
 
     return hash
 }
@@ -125,7 +92,7 @@ export function reverseEndian(hex: Hex): Hex {
     return hexLE
 }
 
-export function numberToHex(number: number = 0, bits: number = 64, result: Response = "hex"): Hex {
+export function numberToHex(number: number = 0, bits: number = 64): Uint8Array {
 
     let hexValue = number.toString(16) // string hexadecimal
 
@@ -136,26 +103,13 @@ export function numberToHex(number: number = 0, bits: number = 64, result: Respo
         hexValue = "0" + hexValue
     }
 
-    if(result == "hex")
-        return hexValue
-
     return hexToBytes(hexValue)
 }
 
 // Convert a integer number in Uint8Array(16) // 64 bits little-endian
-export function numberToHexLE(number: number = 0, bits: number = 64, result: Response = "hex"): Hex {
-
-    bits = bits < 8 ? 8 : bits
-    
-    let hexValue = number.toString(16) // string hexadecimal
-
-    for (let i = hexValue.length; i < bits / 4; i++)
-        hexValue = "0" + hexValue
-
-    if(result == "hex")
-        return reverseEndian(hexValue)
-
-    return hexToBytes(hexValue).reverse()
+export function numberToHexLE(number: number = 0, bits: number = 64): Uint8Array 
+{
+    return numberToHex(number, bits).reverse()
 }
 
 export function hash160ToScript(hash160: Hex): Hex {
@@ -228,25 +182,22 @@ export function isEqual(...arrays: Uint8Array[]): boolean {
     return result
 }
 
-export function numberToVarTnt(value: number, resultType: Response = "hex"): Hex {
+export function numberToVarTnt(value: number): Uint8Array {
 
     let result: Uint8Array
     if (value < 0xfd) {
         result = new Uint8Array([value])
     } else if (value <= 0xffff) {
-        var number = numberToHexLE(value, 16, "bytes") as Uint8Array
+        var number = numberToHexLE(value, 16)
         result = mergeUint8Arrays(new Uint8Array([0xfd]), number)
     } else if (value <= 0xffffffff) {
-        let number = numberToHexLE(value, 32, "bytes") as Uint8Array
+        let number = numberToHexLE(value, 32) 
         result = mergeUint8Arrays(new Uint8Array([0xfe]), number)
     } else { 
-        let number = numberToHexLE(value, 64, "bytes") as Uint8Array
+        let number = numberToHexLE(value, 64) as Uint8Array
         result = mergeUint8Arrays(new Uint8Array([0xff]), number)
     }
     
-    if(resultType == "hex")
-        return bytesToHex(result)
-
     return result
 }
 

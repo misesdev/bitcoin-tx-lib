@@ -59,13 +59,13 @@ describe("utils", () => {
     })
 
     test("hash sha256 and hash256", () => {
-        const hash = sha256("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D")
+        const hash = sha256(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"))
 
         expect(hash).toBeDefined()
 
-        const hash256 = sha256("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D", true)
+        const hash256 = sha256(hexToBytes("800C28FCA386C7A227600B2FE50B7CAE11EC86D3BF1FBE471BE89827E19D72AA1D"), true)
         
-        expect(hash256).toBe("507a5b8dfed0fc6fe8801743720cedec06aa5c6fca72b07c49964492fb98a714")
+        expect(bytesToHex(hash256)).toBe("507a5b8dfed0fc6fe8801743720cedec06aa5c6fca72b07c49964492fb98a714")
     })
 
     test("hash checksum", () => {
@@ -76,18 +76,18 @@ describe("utils", () => {
 
     test("hash ripemd160", () => {
 
-        let sha256 = "6b23c0eabc34e97f4b5f8c2277d6b7f6869b16dfb4f2c284b94efc13a3d81b0c"
+        let sha256 = hexToBytes("6b23c0eabc34e97f4b5f8c2277d6b7f6869b16dfb4f2c284b94efc13a3d81b0c")
 
         let hash = ripemd160(sha256)
 
-        expect(hash).toBe("825e1e77af4ea56228f2c96385dc24d9ba788a8c")
+        expect(bytesToHex(hash)).toBe("825e1e77af4ea56228f2c96385dc24d9ba788a8c")
 
         // generating ripemd160 hash based on characters and not considering hexadecimal
         //hash = ripemd160(hexToBytes(sha256, false))
         //expect(bytesToHex(hash)).toBe("fad534e4b13dd564f2c0e20120e79ff1d5b07548")
 
         // generate for address ripemd160(sha256(hash))
-        hash = ripemd160(hexToBytes(sha256), true) as Uint8Array
+        hash = ripemd160(sha256, true)
    
         expect(bytesToHex(hash)).toBe("58077dda57de14ac9f055c64bf3c71ff0b5796da")
     })
@@ -110,18 +110,18 @@ describe("utils", () => {
 
     test("convert a number integer in hexadecimal", () => {
         let hexNumber = numberToHex(1, 32) // 32bits
-        expect(hexNumber).toBe("00000001")
+        expect(bytesToHex(hexNumber)).toBe("00000001")
 
         hexNumber = numberToHex(0, 32)
-        expect(hexNumber).toBe("00000000")
+        expect(bytesToHex(hexNumber)).toBe("00000000")
     })
 
     test("convert a number integer in hexadecimal(little-endian)", () => {
         let hexNumber = numberToHexLE(1, 32) // 32bits
-        expect(hexNumber).toBe("01000000")
+        expect(bytesToHex(hexNumber)).toBe("01000000")
 
         hexNumber = numberToHexLE(0, 32)
-        expect(hexNumber).toBe("00000000")
+        expect(bytesToHex(hexNumber)).toBe("00000000")
     })
 
     test("generate script from hash160", () => {
@@ -175,7 +175,7 @@ describe("utils", () => {
     test("convert a number to little-endian varint", () => {
         let result = numberToVarTnt(250)
         
-        expect("fa").toBe(result)
+        expect("fa").toBe(bytesToHex(result))
 
         result = numberToVarTnt(255)
 
@@ -198,8 +198,8 @@ describe("utils", () => {
 
     test("hash256 sha256(sha256(content))", () => {
 
-        const hash = hash256("ffff")
+        const hash = hash256(hexToBytes("ffff"))
 
-        expect("fb8d65a41e2f8c97a133f779f5df09b6c5d4ced416f378ef99eea3d86d2b2dfd").toBe(hash)
+        expect(bytesToHex(hash)).toBe("fb8d65a41e2f8c97a133f779f5df09b6c5d4ced416f378ef99eea3d86d2b2dfd")
     })
 }) 

@@ -11,7 +11,7 @@ export declare class Transaction extends BaseTransaction {
     constructor(pairkey: ECPairKey, options?: TXOptions);
     getFeeSats(): number;
     resolveFee(): void;
-    build(format?: BuildFormat): string;
+    build(format?: BuildFormat): Uint8Array;
     getTxid(): string;
     private generateScriptSig;
     private generateWitness;

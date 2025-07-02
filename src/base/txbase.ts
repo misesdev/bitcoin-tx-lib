@@ -1,7 +1,8 @@
 import { ECPairKey } from "../ecpairkey"
 import { InputTransaction, OutputTransaction } from "../types"
-import { bytesToHex, getBytesCount, numberToHexLE, numberToVarTnt } from "../utils"
+import { getBytesCount, numberToHexLE, numberToVarTnt } from "../utils"
 import { Address } from "../utils/address"
+import { ByteBuffer } from "../utils/buffer"
 import { addressToScriptPubKey } from "../utils/txutils"
 
 export abstract class BaseTransaction {
@@ -14,47 +15,48 @@ export abstract class BaseTransaction {
     protected whoPayTheFee?: string
     protected cachedata: any = {}
     protected pairKey: ECPairKey
-    
+
     constructor(pairKey: ECPairKey) {
         this.pairKey = pairKey
     }
-    
+
     public addInput(input: InputTransaction) 
     { 
         if(this.inputs.some(i => i.txid == input.txid))
-            throw new Error("An input with this txid has already been added")
+        throw new Error("An input with this txid has already been added")
         if(getBytesCount(input.txid) != 32)
-            throw new Error("Expected a valid txid")
+        throw new Error("Expected a valid txid")
         else if(!input.scriptPubKey)
-            throw new Error("Expected scriptPubKey")
+        throw new Error("Expected scriptPubKey")
 
         // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
         if(!input.sequence)
-            input.sequence = "fffffffd"
-        
+        input.sequence = "fffffffd"
+
         this.inputs.push(input)
     }
 
     public addOutput(output: OutputTransaction) 
     {
         if(this.outputs.some(o => o.address == output.address))
-            throw new Error("An output with this address has already been added")
+        throw new Error("An output with this address has already been added")
         if(!Address.isValid(output.address))
-            throw new Error("Expected a valid address to output")
+        throw new Error("Expected a valid address to output")
         if(output.amount <= 0)
-            throw new Error("Expected a valid amount")
+        throw new Error("Expected a valid amount")
 
         this.outputs.push(output)
     }
 
-    public outputsRaw() : string {
-        return this.outputs.map(output => {
-            let txoutput = String(numberToHexLE(output.amount, 64, "hex"))
+    public outputsRaw() : Uint8Array {
+        const rows = this.outputs.map(output => {
+            let txoutput = new ByteBuffer(numberToHexLE(output.amount, 64))
             let scriptPubKey = addressToScriptPubKey(output.address)
-            txoutput += String(numberToVarTnt(scriptPubKey.length, "hex"))
-            txoutput += bytesToHex(scriptPubKey)
-            return txoutput
-        }).join("")
+            txoutput.append(numberToVarTnt(scriptPubKey.length))
+            txoutput.append(scriptPubKey)
+            return txoutput.raw()
+        }).flat()
+        return ByteBuffer.merge(rows)
     }
 }
 

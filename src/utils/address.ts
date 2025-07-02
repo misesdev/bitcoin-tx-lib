@@ -3,6 +3,7 @@ import { Bech32 } from "../base/bech32"
 import { bytesToHex, checksum, getBytesCount, hexToBytes, numberToHex, ripemd160 } from "."
 import { base58 } from "@scure/base"
 import { addressToScriptPubKey } from "./txutils"
+import { ByteBuffer } from "./buffer"
 
 interface PubkeyProps {
     pubkey: string,
@@ -31,17 +32,15 @@ export class Address {
             return bech32.getAddress()
         } else {
             // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
-            let prefix = String(numberToHex(this.addressPrefix[network], 8, "hex"))
-
-            let pubScript = ripemd160(pubkey, true)
+            let builder = new ByteBuffer(numberToHex(this.addressPrefix[network], 8))
             
-            let script = prefix + pubScript //prefixAddress + scriptRipemd160
+            builder.append(ripemd160(hexToBytes(pubkey), true))
             
-            let checkHash = checksum(script)
+            let checkHash = checksum(builder.raw())
 
-            let result = script + checkHash
+            builder.append(checkHash)
 
-            return base58.encode(hexToBytes(result))
+            return base58.encode(builder.raw())
         }
     }
 
@@ -58,15 +57,15 @@ export class Address {
             return bech32.encode(complete)
         } else {
             // byte prefix 0x00 and 0x6f (doc: https://en.bitcoin.it/wiki/List_of_address_prefixes)
-            let prefix = String(numberToHex(this.addressPrefix[network], 8, "hex"))
+            let builder = new ByteBuffer(numberToHex(this.addressPrefix[network], 8))
 
-            let script = prefix + ripemd160 //prefixAddress + scriptRipemd160
+            builder.append(hexToBytes(ripemd160))
             // the last param to sha256 -> true -> sha256(sha256(script)).substring(0, 8) - is a checksum(first 4 bytes)
-            let checkHash = checksum(script)
+            let checkHash = checksum(builder.raw())
 
-            let result = script + checkHash
+            builder.append(checkHash)
 
-            return base58.encode(hexToBytes(result))
+            return base58.encode(builder.raw())
         } 
     }
 
