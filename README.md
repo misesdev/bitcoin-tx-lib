@@ -15,6 +15,7 @@ with no reliance on native modules.
   - [Network fee](#network-fee)
 - [How to use Hierarchical Deterministic Keys](hdkmanager.md)
 - [How to use HD Wallet functions](hdwallet.md)
+- [Building an HD Bitcoin Wallet with `bitcoin-tx-lib`](wallet.md)
 
 ## Install 
 

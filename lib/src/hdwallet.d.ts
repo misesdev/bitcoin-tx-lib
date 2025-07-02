@@ -1,10 +1,10 @@
-import { ECPairKey } from "../ecpairkey";
-import { HDKManager, PathOptions } from "../hdkmanager";
-import { BNetwork, TypeAddress } from "../types";
+import { ECPairKey } from "./ecpairkey";
+import { HDKManager, PathOptions } from "./hdkmanager";
+import { BNetwork, TypeAddress } from "./types";
 interface HDWalletOptions {
     network: BNetwork;
 }
-export interface IHDWallet {
+export interface HDWalletData {
     mnemonic?: string;
     hdwallet: HDWallet;
 }
@@ -25,7 +25,7 @@ export declare class HDWallet {
      * @param options Network options.
      * @returns Object containing the mnemonic and wallet instance.
      */
-    static create(password?: string, options?: HDWalletOptions): IHDWallet;
+    static create(password?: string, options?: HDWalletOptions): HDWalletData;
     /**
      * Imports a wallet from mnemonic, xpriv, or xpub.
      * @param input String representing the mnemonic, xpriv, or xpub.
@@ -33,7 +33,7 @@ export declare class HDWallet {
      * @param options Network options.
      * @returns Object containing the HDWallet and optionally the mnemonic.
      */
-    static import(input: string, password?: string, options?: HDWalletOptions): IHDWallet;
+    static import(input: string, password?: string, options?: HDWalletOptions): HDWalletData;
     /**
      * Derives multiple key pairs from the wallet.
      * @param quantity Number of keys to derive.
