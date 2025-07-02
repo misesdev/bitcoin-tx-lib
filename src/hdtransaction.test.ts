@@ -1,6 +1,6 @@
 import { HDTransaction } from "./hdtransaction"
-import { HDWallet } from "./hdwallet"
 import { InputTransaction, OutputTransaction } from "./types"
+import { HDWallet } from "./hdwallet"
 
 describe("transaction class", () => {
     

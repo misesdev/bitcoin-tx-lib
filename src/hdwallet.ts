@@ -1,9 +1,9 @@
-import { ECPairKey } from "../ecpairkey";
-import { HDKManager, PathOptions } from "../hdkmanager";
+import { ECPairKey } from "./ecpairkey";
+import { HDKManager, PathOptions } from "./hdkmanager";
 import {  generateMnemonic, validateMnemonic } from "bip39"
-import { BNetwork, TypeAddress } from "../types";
-import { Address } from "../utils/address";
-import { bytesToHex } from "../utils";
+import { BNetwork, TypeAddress } from "./types";
+import { Address } from "./utils/address";
+import { bytesToHex } from "./utils";
 
 const defaultTypeAddress: TypeAddress = "p2wpkh"
 
@@ -11,7 +11,7 @@ interface HDWalletOptions {
     network: BNetwork
 }
 
-export interface IHDWallet {
+export interface HDWalletData {
     mnemonic?: string;
     hdwallet: HDWallet;
 }
@@ -41,7 +41,7 @@ export class HDWallet
      * @param options Network options.
      * @returns Object containing the mnemonic and wallet instance.
      */
-    public static create(password?: string, options?: HDWalletOptions) : IHDWallet
+    public static create(password?: string, options?: HDWalletOptions) : HDWalletData
     {
         const mnemonic = generateMnemonic(128)
         const hdwallet = new HDWallet(HDKManager.fromMnemonic(mnemonic, password), options)
@@ -55,7 +55,7 @@ export class HDWallet
      * @param options Network options.
      * @returns Object containing the HDWallet and optionally the mnemonic.
      */
-    public static import(input: string, password?: string, options?: HDWalletOptions) : IHDWallet
+    public static import(input: string, password?: string, options?: HDWalletOptions) : HDWalletData
     {
         const trimmed = input.trim()
 

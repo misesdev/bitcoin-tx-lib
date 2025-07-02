@@ -1,5 +1,5 @@
-import { HDWallet } from "../hdwallet";
-import { BNetwork } from "../types";
+import { HDWallet } from "./hdwallet";
+import { BNetwork } from "./types";
 
 jest.mock("bip39", () => ({
     ...jest.requireActual("bip39"),
