@@ -13,5 +13,5 @@ export declare function hash160ToScript(hash160: Hex): Hex;
 export declare function reverseHexLE(hex: Hex, isBytes?: boolean): Hex;
 export declare function mergeUint8Arrays(...arrays: Uint8Array[]): Uint8Array;
 export declare function isEqual(...arrays: Uint8Array[]): boolean;
-export declare function numberToVarTnt(value: number): Uint8Array;
+export declare function numberToVarint(value: number): Uint8Array;
 export declare function getBytesCount(hex: string): number;

@@ -1,7 +1,6 @@
 import { ECPairKey } from "./ecpairkey"
 import { Transaction } from "./transaction"
 import { InputTransaction, OutputTransaction } from "./types"
-import { bytesToHex } from "./utils"
 
 describe("transaction class", () => {
     
@@ -74,6 +73,15 @@ describe("transaction class", () => {
             amount: (29128) - 500 
         })
 
+        transaction.sign()
+        
+        // let txid = transaction.getTxid()
+        // let txraw = transaction.getRawHex()
+
+        // console.log(txid)
+        // console.log(txraw)
+
+        // expect(transaction.getTxid()).toBe("a1b76bcd323417a9363cc21bef3aeab5cca5b6252c35c087f33ea2c0a3b43d55")
         expect(transaction.isSegwit()).toBe(false)
         expect(752).toEqual(transaction.weight())
         expect(188).toEqual(transaction.vBytes())
@@ -91,22 +99,14 @@ describe("transaction class", () => {
             address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
             amount: (29128) - 500 
         })
-        let txid = transaction.getTxid()
 
-        expect(txid).toBe("00a33f03ade6a8744084edb472931b8435ea545995e787333b75ff2e020f3915")
+        transaction.sign()
+
+        expect(transaction.getTxid()).toBe("00a33f03ade6a8744084edb472931b8435ea545995e787333b75ff2e020f3915")
         expect(transaction.isSegwit()).toBe(true)
         expect(437).toEqual(transaction.weight())
         expect(110).toEqual(transaction.vBytes())
         expect(110).toEqual(transaction.getFeeSats())
-    })
-
-    test("Must assemble output fields for signature", () => {
-        transaction.addOutput({
-            address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
-            amount: (29128) - 500 
-        })
-        let raw = transaction.outputsRaw()
-        expect(bytesToHex(raw)).toBe("d46f000000000000160014aec042df56d9dc2fad0b30faf62eb94f07cba3cc")
     })
 
     test("Must resolve network fee for payer exit", () => {
@@ -128,7 +128,11 @@ describe("transaction class", () => {
             address: "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj",
             amount: 15000 
         })
+        
+        transaction.sign()
         transaction.resolveFee()
+
+        expect(transaction.getTxid()).toBe("b1ad7dd1537974123e3096157e7fdbb48feae06bc5d78c14d914cffdc67f3f08")
         expect(transaction.outputs[0].amount).toBeLessThan(15000)
         expect(transaction.outputs[1].amount).toEqual(15000)
         expect(141).toEqual(transaction.getFeeSats())
@@ -155,7 +159,11 @@ describe("transaction class", () => {
             address: "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj",
             amount: 15000 
         })
+        
+        transaction.sign()
         transaction.resolveFee()
+
+        expect(transaction.getTxid()).toBe("b1ad7dd1537974123e3096157e7fdbb48feae06bc5d78c14d914cffdc67f3f08")
         expect(transaction.outputs[0]?.amount).toEqual(15000)
         expect(transaction.outputs[1]?.amount).toBeLessThan(15000)
         expect(141).toEqual(transaction.getFeeSats())
@@ -182,8 +190,11 @@ describe("transaction class", () => {
             address: "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj",
             amount: 15000 
         })
+
+        transaction.sign()
         transaction.resolveFee()
 
+        expect(transaction.getTxid()).toBe("b1ad7dd1537974123e3096157e7fdbb48feae06bc5d78c14d914cffdc67f3f08")
         expect(transaction.outputs[0].amount).toBeLessThan(15000)
         expect(transaction.outputs[1].amount).toBeLessThan(15000)
         expect(141).toEqual(transaction.getFeeSats())

@@ -1,23 +1,107 @@
 import { BaseTransaction } from "./base/txbase";
-import { OP_CODES } from "./constants/opcodes";
 import { ECPairKey } from "./ecpairkey";
-import { bytesToHex, hash256, hexToBytes, numberToHex, numberToHexLE,
-    numberToVarint } from "./utils";
-import { scriptPubkeyToScriptCode } from "./utils/txutils";
-import { InputTransaction, TXOptions } from "./types";
-import { ByteBuffer } from "./utils/buffer";
-
-type BuildFormat = "raw" | "txid"
+import { bytesToHex, hash256 } from "./utils";
+import { TXOptions } from "./types";
 
 export class Transaction extends BaseTransaction {
 
+    /**
+     * Creates a new Transaction instance.
+     * @param pairkey The key pair used to sign the transaction inputs.
+     * @param options Optional transaction parameters (version, locktime, fee, etc.).
+     */
     constructor(pairkey: ECPairKey, options?: TXOptions) 
     {
         super(pairkey, options)
     }
 
+    /**
+     * Signs the transaction.
+     * Caches the raw transaction data and the version used for txid calculation.
+     */
+    public sign() : void {
+        this.cachedata.set("txraw", this.build())
+        this.cachedata.set("txidraw", this.build("txid"))
+    }
+
+    /**
+     * Returns the transaction ID (txid) as a hex string.
+     * The txid is the double SHA-256 hash of the stripped raw transaction (no witness data), reversed in byte order.
+     * 
+     * @throws Error if the transaction is not signed.
+     * @returns The txid as a hex string.
+     */
+    public getTxid(): string 
+    {    
+        let hexTransaction = this.cachedata.get("txidraw")
+        
+        if(!hexTransaction) 
+            throw new Error("Transaction not signed, please sign the transaction")
+        
+        let txid = hash256(hexTransaction).reverse()
+
+        return bytesToHex(txid)
+    }
+
+    /**
+     * Calculates the total weight of the transaction according to BIP 141.
+     * Weight = (non-witness bytes * 4) + witness bytes.
+     * 
+     * @throws Error if the transaction is not signed.
+     * @returns The transaction weight.
+     */
+    public weight() : number 
+    {
+        // docs https://learnmeabitcoin.com/technical/transaction/size/
+        if(!this.cachedata.get("txraw"))
+            throw("Transaction not signed, please sign the transaction")
+	    // witness marker and flag * 1
+        let witnessMK = 0 // 2 bytes of marker and flag 0x00+0x01 = 2 bytes * 1
+       
+        if(this.isSegwit()) witnessMK = 2
+
+        let hexTransaction = this.cachedata.get("txraw") ?? this.build()
+        
+        let witnessInputs = this.inputs.filter(this.isSegwitInput)
+	    // witness size * 1
+        let witnessSize = witnessInputs.reduce((sum, input) => {
+            let witness = this.buildWitness(input)
+            return sum + witness.length
+        }, 0) 
+        // discount the size of the witness fields and multiply by 4
+        let transactionSize = hexTransaction.length
+        transactionSize = (transactionSize - (witnessSize + witnessMK)) * 4 
+        transactionSize += (witnessSize + witnessMK) // * 1
+        
+        return Math.ceil(transactionSize)
+    }
+
+    /**
+     * Calculates the virtual size (vBytes) of the transaction.
+     * Defined as weight divided by 4.
+     * 
+     * @throws Error if the transaction is not signed.
+     * @returns The transaction virtual size in bytes.
+     */
+    public vBytes()
+    {
+        // docs https://learnmeabitcoin.com/technical/transaction/size/
+       	return Math.ceil(this.weight() / 4) 
+    }
+  
+    /**
+     * Deducts the transaction fee from the output(s) according to the fee-paying strategy.
+     * If only one output exists, deduct the entire fee from it.
+     * If `whoPayTheFee` is "everyone", split the fee evenly among all outputs.
+     * If `whoPayTheFee` is an address, deduct the fee from the output matching that address.
+     * 
+     * @throws Error if the transaction is not signed.
+     */
     public resolveFee() : void
     {
+        if(!this.cachedata.get("txraw"))
+            throw("Transaction not signed, please sign the transaction")
+        
         let satoshis = Math.ceil(this.vBytes() * (this.fee??1))
 
         if(this.outputs.length == 1) {
@@ -38,201 +122,38 @@ export class Transaction extends BaseTransaction {
         }
     }
 
-    public build(format: BuildFormat = "raw"): string 
-    {    
-        let witnessData = new ByteBuffer()
-        
-        let hexTransaction = new ByteBuffer(numberToHexLE(this.version, 32)) // version
-
-        if(this.isSegwit() && format != "txid") // Marker and Flag for SegWit transactions
-            hexTransaction.append(new Uint8Array([0x00, 0x01])) //"00" + "01";
-
-        // number of inputs
-        hexTransaction.append(numberToVarint(this.inputs.length))
-        
-        this.inputs.forEach(input => {
-            hexTransaction.append(hexToBytes(input.txid).reverse()) // txid
-            hexTransaction.append(numberToHexLE(input.vout, 32)) // index output (vout)
-
-            if(this.isSegwitInput(input)) {
-                witnessData.append(this.generateWitness(input))
-                hexTransaction.append(new Uint8Array([0])) // script sig in witness area // P2WPKH 
-            } else {
-                witnessData.append(new Uint8Array([0])) // no witness, only scriptSig
-                let scriptSig = this.generateScriptSig(input)
-                hexTransaction.append(numberToHexLE(scriptSig.length, 8))
-                hexTransaction.append(scriptSig)
-            }
-            // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
-            hexTransaction.append(hexToBytes(input.sequence??"fffffffd").reverse()) // 0xfffffffd
-        })
-
-        hexTransaction.append(numberToVarint(this.outputs.length)) // number of outputs
-
-        hexTransaction.append(this.outputsRaw()) // amount+scriptpubkey
-
-        if(this.isSegwit() && format != "txid") hexTransaction.append(witnessData.raw())
-
-        hexTransaction.append(numberToHexLE(this.locktime, 32)) // locktime
-
-        return bytesToHex(hexTransaction.raw())
-    }
-
-    public getTxid(): string 
-    {    
-        let hexTransaction = this.build("txid")
-        
-        let txid = hash256(hexToBytes(hexTransaction)).reverse()
-
-        return bytesToHex(txid)
-    }
-
-    private generateScriptSig(inputSig: InputTransaction) : Uint8Array
-    {
-        let hexTransaction = new ByteBuffer(numberToHexLE(this.version, 32)) // version
-
-        hexTransaction.append(numberToVarint(this.inputs.length)) // number of inputs
-
-        this.inputs.forEach(input => {
-            hexTransaction.append(hexToBytes(input.txid).reverse()) // txid
-            hexTransaction.append(numberToHexLE(input.vout, 32)) // index output (vout)
-            if(input.txid === inputSig.txid) {
-                let script = hexToBytes(input.scriptPubKey)
-                hexTransaction.append(numberToVarint(script.length))
-                hexTransaction.append(script)
-            } else
-                hexTransaction.append(new Uint8Array([0])) // length 0x00 to sign
-            // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
-            hexTransaction.append(hexToBytes(input.sequence??"fffffffd").reverse()) 
-        })
-
-        hexTransaction.append(numberToVarint(this.outputs.length)) // number of outputs
-
-        hexTransaction.append(this.outputsRaw())
-
-        hexTransaction.append(numberToHexLE(this.locktime, 32)) // locktime
-
-        hexTransaction.append(numberToHexLE(OP_CODES.SIGHASH_ALL, 32))
-
-        let sigHash = hash256(hexTransaction.raw()) // hash256 -> sha256(sha256(content))
-
-        let scriptSig = new ByteBuffer(this.pairKey.signDER(sigHash))
-
-        scriptSig.append(numberToHexLE(OP_CODES.SIGHASH_ALL, 8)) 
-
-        scriptSig.prepend(numberToHex(scriptSig.length, 8))
-        
-        let publicKey = this.pairKey.getPublicKey()
-
-        scriptSig.append(numberToHex(publicKey.length, 8))
-        scriptSig.append(publicKey)
-        
-        return scriptSig.raw()
-    }
-
-    private generateWitness(input: InputTransaction) : Uint8Array 
-    {
-        let hexTransaction = new ByteBuffer(numberToHexLE(this.version, 32)) // version
-        // hashPrevouts
-        let prevouts = this.inputs.map(input => {
-            let build = new ByteBuffer(hexToBytes(input.txid).reverse())
-            build.append(numberToHexLE(input.vout, 32))
-            return build.raw()
-        })
-        let hashPrevouts = hash256(ByteBuffer.merge(prevouts))
-        hexTransaction.append(hashPrevouts)
-        // hashSequence
-        let sequence = this.inputs.map(input => hexToBytes(input.sequence??"fffffffd").reverse())
-        let hashSequence = hash256(ByteBuffer.merge(sequence))
-        hexTransaction.append(hashSequence)
-        // out point 
-        hexTransaction.append(hexToBytes(input.txid).reverse())
-        hexTransaction.append(numberToHexLE(input.vout, 32))
-        // script code
-        let scriptCode = scriptPubkeyToScriptCode(input.scriptPubKey)
-        hexTransaction.append(scriptCode)
-        // amount
-        hexTransaction.append(numberToHexLE(input.value, 64))
-        // sequence
-        // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
-        hexTransaction.append(hexToBytes(input.sequence??"fffffffd").reverse())
-        // hashOutputs
-        let hashOutputs = hash256(this.outputsRaw())
-        hexTransaction.append(hashOutputs)
-
-        hexTransaction.append(numberToHexLE(this.locktime, 32)) // locktime
-
-        hexTransaction.append(numberToHexLE(OP_CODES.SIGHASH_ALL, 32)) // sighash
-
-        let sigHash = hash256(hexTransaction.raw())  // hash256 -> sha256(sha256(content))
-
-        let scriptSig = new ByteBuffer(this.pairKey.signDER(sigHash))
-
-        scriptSig.append(numberToHex(OP_CODES.SIGHASH_ALL, 8))
-        
-        scriptSig.prepend(numberToVarint(scriptSig.length))
-       
-        let publicKey = this.pairKey.getPublicKey()
-        scriptSig.append(numberToVarint(publicKey.length))
-        scriptSig.append(publicKey)
-
-        scriptSig.prepend(numberToHex(2, 8)) // 2 items(signature & pubkey) 0x02
-        
-        return scriptSig.raw()
-    }
-
-    public isSegwit() : boolean 
-    {
-        return this.inputs.some(this.isSegwitInput)
-    }
-
-    private isSegwitInput(input: InputTransaction) : boolean 
-    {
-        const bytes = hexToBytes(input.scriptPubKey)
-    
-        return ((bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14) || // P2WPKH
-            (bytes.length === 34 && bytes[0] == 0x00 && bytes[1] == 0x20))       // P2WSH
-    }
-    
-    // docs https://learnmeabitcoin.com/technical/transaction/size/
-    public weight() : number
-    {
-	    // witness marker and flag * 1
-        let witnessMK = 0 // 2 bytes of marker and flag 0x00+0x01 = 2 bytes * 1
-       
-        if(this.isSegwit()) witnessMK = 2
-
-        let hexTransaction = hexToBytes(this.build())
-        
-        let witnessInputs = this.inputs.filter(this.isSegwitInput)
-	    // witness size * 1
-        let witnessSize = witnessInputs.reduce((sum, input) => {
-            let witness = this.generateWitness(input)
-            return sum + witness.length
-        }, 0) 
-        // discount the size of the witness fields and multiply by 4
-        let transactionSize = hexTransaction.length
-        transactionSize = (transactionSize - (witnessSize + witnessMK)) * 4 
-        transactionSize += (witnessSize + witnessMK) // * 1
-        
-        return Math.ceil(transactionSize)
-    }
-
-    // docs https://learnmeabitcoin.com/technical/transaction/size/
-    public vBytes()
-    {
-       	return Math.ceil(this.weight() / 4) 
-    }
-    
+    /**
+     * Calculates the total fee in satoshis based on the virtual size and fee rate.
+     * 
+     * @returns The transaction fee in satoshis.
+     */
     public getFeeSats() 
     {
         return Math.ceil(this.vBytes() * (this.fee??1))
     }
 
-    public clear() 
-    {
-        this.inputs = []
-        this.outputs = []
+    /**
+     * Returns the raw transaction as a hex string.
+     * 
+     * @throws Error if the transaction is not signed.
+     * @returns The raw transaction hex string.
+     */
+    public getRawHex() : string {
+        const raw = this.cachedata.get("txraw")
+        if(!raw) throw new Error("Unsigned transaction")
+        return bytesToHex(raw)
+    }
+
+    /**
+     * Returns the raw transaction bytes as a Uint8Array.
+     * 
+     * @throws Error if the transaction is not signed.
+     * @returns The raw transaction bytes.
+     */
+    public getRawBytes() : Uint8Array {
+        const raw = this.cachedata.get("txraw")
+        if(!raw) throw new Error("Unsigned transaction")
+        return raw
     }
 }
 
