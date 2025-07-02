@@ -28,6 +28,8 @@ export class HDTransaction extends HDTransactionBase
      */
     public getTxid(): string 
     {    
+        if(!this.cachedata.get("txidraw")) this.sign()
+        
         let hexTransaction = this.cachedata.get("txidraw")
         
         if(!hexTransaction) 
@@ -65,14 +67,13 @@ export class HDTransaction extends HDTransactionBase
      */
     public weight() : number // docs https://learnmeabitcoin.com/technical/transaction/size/
     {
-        if(!this.cachedata.get("txraw"))
-            throw("Transaction not signed, please sign the transaction")
+        if(!this.cachedata.get("txraw")) this.sign()
 	    // witness marker and flag * 1
         let witnessMK = 0 // 2 bytes of marker and flag 0x00+0x01 = 2 bytes * 1
        
         if(this.isSegwit()) witnessMK = 2
 
-        let hexTransaction = this.build()
+        let hexTransaction = this.cachedata.get("txraw") as Uint8Array
         
         let witnessInputs = this.inputs.filter(this.isSegwitInput)
 	    // witness size * 1
@@ -111,8 +112,7 @@ export class HDTransaction extends HDTransactionBase
      */
     public resolveFee() : void
     {
-        if(!this.cachedata.get("txraw"))
-            throw("Transaction not signed, please sign the transaction")
+        if(!this.cachedata.get("txraw")) this.sign()
         
         let satoshis = Math.ceil(this.vBytes() * (this.fee??1))
 
@@ -141,7 +141,9 @@ export class HDTransaction extends HDTransactionBase
      */
     public getFeeSats() 
     {
-        return Math.ceil(this.vBytes() * (this.fee??1))
+        if(this.whoPayTheFee && this.fee) this.resolveFee()
+        const feeSats = Math.ceil(this.vBytes() * (this.fee??1))
+        return feeSats
     }
 
     /**
@@ -152,9 +154,8 @@ export class HDTransaction extends HDTransactionBase
      */
     public getRawHex() : string 
     {
-        const raw = this.cachedata.get("txraw")
-        if(!raw) throw new Error("Transaction not signed, please sign the transaction")
-        return bytesToHex(raw)
+        if(!this.cachedata.get("txraw")) this.sign()
+        return bytesToHex(this.cachedata.get("txraw") as Uint8Array)
     }
 
     /**
@@ -165,9 +166,8 @@ export class HDTransaction extends HDTransactionBase
      */
     public getRawBytes() : Uint8Array 
     {
-        const raw = this.cachedata.get("txraw")
-        if(!raw) throw new Error("Transaction not signed, please sign the transaction")
-        return raw
+        if(!this.cachedata.get("txraw")) this.sign()
+        return this.cachedata.get("txraw") as Uint8Array
     }
 }
 
