@@ -1,41 +1,26 @@
-import { BaseTransaction } from "./base/txbase";
+import { HDTransactionBase } from "./base/hdtxbase";
 import { OP_CODES } from "./constants/opcodes";
-import { ECPairKey } from "./ecpairkey";
-import { bytesToHex, hash256, hexToBytes, numberToHex, numberToHexLE,
-    numberToVarint } from "./utils";
-import { scriptPubkeyToScriptCode } from "./utils/txutils";
 import { InputTransaction, TXOptions } from "./types";
+import { bytesToHex, hash256, hexToBytes, numberToHex, numberToHexLE, numberToVarint } from "./utils";
 import { ByteBuffer } from "./utils/buffer";
+import { scriptPubkeyToScriptCode } from "./utils/txutils";
 
 type BuildFormat = "raw" | "txid"
 
-export class Transaction extends BaseTransaction {
-
-    constructor(pairkey: ECPairKey, options?: TXOptions) 
+export class HDTransaction extends HDTransactionBase
+{
+    constructor(options?: TXOptions)
     {
-        super(pairkey, options)
+        super(options)
     }
 
-    public resolveFee() : void
-    {
-        let satoshis = Math.ceil(this.vBytes() * (this.fee??1))
-
-        if(this.outputs.length == 1) {
-            this.outputs[0].amount -= satoshis
-            return
-        }
+    public getTxid(): string 
+    {    
+        let hexTransaction = this.build("txid")
         
-        if(this.whoPayTheFee === "everyone") {
-            satoshis = Math.ceil(this.vBytes() * (this.fee??1) / this.outputs.length)
-            this.outputs.forEach(out => out.amount -= satoshis)
-        }
+        let txid = hash256(hexToBytes(hexTransaction)).reverse()
 
-        for(let i = 0; i < this.outputs.length; i++) {
-            if(this.outputs[i].address == this.whoPayTheFee) {
-                this.outputs[i].amount -= satoshis
-                break
-            }
-        }
+        return bytesToHex(txid)
     }
 
     public build(format: BuildFormat = "raw"): string 
@@ -58,10 +43,10 @@ export class Transaction extends BaseTransaction {
                 witnessData.append(this.generateWitness(input))
                 hexTransaction.append(new Uint8Array([0])) // script sig in witness area // P2WPKH 
             } else {
-                witnessData.append(new Uint8Array([0])) // no witness, only scriptSig
                 let scriptSig = this.generateScriptSig(input)
                 hexTransaction.append(numberToHexLE(scriptSig.length, 8))
                 hexTransaction.append(scriptSig)
+                witnessData.append(new Uint8Array([0])) // no witness, only scriptSig
             }
             // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
             hexTransaction.append(hexToBytes(input.sequence??"fffffffd").reverse()) // 0xfffffffd
@@ -78,17 +63,12 @@ export class Transaction extends BaseTransaction {
         return bytesToHex(hexTransaction.raw())
     }
 
-    public getTxid(): string 
-    {    
-        let hexTransaction = this.build("txid")
-        
-        let txid = hash256(hexToBytes(hexTransaction)).reverse()
-
-        return bytesToHex(txid)
-    }
-
     private generateScriptSig(inputSig: InputTransaction) : Uint8Array
     {
+        let pairkey = this.pairKeys.get(inputSig.txid)
+        if(!pairkey)
+            throw new Error(`missing pairkey of input ${JSON.stringify(inputSig)}`)
+        
         let hexTransaction = new ByteBuffer(numberToHexLE(this.version, 32)) // version
 
         hexTransaction.append(numberToVarint(this.inputs.length)) // number of inputs
@@ -116,13 +96,13 @@ export class Transaction extends BaseTransaction {
 
         let sigHash = hash256(hexTransaction.raw()) // hash256 -> sha256(sha256(content))
 
-        let scriptSig = new ByteBuffer(this.pairKey.signDER(sigHash))
+        let scriptSig = new ByteBuffer(pairkey.signDER(sigHash))
 
         scriptSig.append(numberToHexLE(OP_CODES.SIGHASH_ALL, 8)) 
 
         scriptSig.prepend(numberToHex(scriptSig.length, 8))
         
-        let publicKey = this.pairKey.getPublicKey()
+        let publicKey = pairkey.getPublicKey()
 
         scriptSig.append(numberToHex(publicKey.length, 8))
         scriptSig.append(publicKey)
@@ -132,6 +112,10 @@ export class Transaction extends BaseTransaction {
 
     private generateWitness(input: InputTransaction) : Uint8Array 
     {
+        let pairkey = this.pairKeys.get(input.txid)
+        if(!pairkey)
+            throw new Error(`missing pairkey of input ${JSON.stringify(input)}`)
+       
         let hexTransaction = new ByteBuffer(numberToHexLE(this.version, 32)) // version
         // hashPrevouts
         let prevouts = this.inputs.map(input => {
@@ -166,13 +150,13 @@ export class Transaction extends BaseTransaction {
 
         let sigHash = hash256(hexTransaction.raw())  // hash256 -> sha256(sha256(content))
 
-        let scriptSig = new ByteBuffer(this.pairKey.signDER(sigHash))
+        let scriptSig = new ByteBuffer(pairkey.signDER(sigHash))
 
         scriptSig.append(numberToHex(OP_CODES.SIGHASH_ALL, 8))
         
         scriptSig.prepend(numberToVarint(scriptSig.length))
        
-        let publicKey = this.pairKey.getPublicKey()
+        let publicKey = pairkey.getPublicKey()
         scriptSig.append(numberToVarint(publicKey.length))
         scriptSig.append(publicKey)
 
@@ -202,7 +186,7 @@ export class Transaction extends BaseTransaction {
        
         if(this.isSegwit()) witnessMK = 2
 
-        let hexTransaction = hexToBytes(this.build())
+        let hexTransaction = this.build()
         
         let witnessInputs = this.inputs.filter(this.isSegwitInput)
 	    // witness size * 1
@@ -223,7 +207,29 @@ export class Transaction extends BaseTransaction {
     {
        	return Math.ceil(this.weight() / 4) 
     }
-    
+   
+    public resolveFee() : void
+    {
+        let satoshis = Math.ceil(this.vBytes() * (this.fee??1))
+
+        if(this.outputs.length == 1) {
+            this.outputs[0].amount -= satoshis
+            return
+        }
+        
+        if(this.whoPayTheFee === "everyone") {
+            satoshis = Math.ceil(this.vBytes() * (this.fee??1) / this.outputs.length)
+            this.outputs.forEach(out => out.amount -= satoshis)
+        }
+
+        for(let i = 0; i < this.outputs.length; i++) {
+            if(this.outputs[i].address == this.whoPayTheFee) {
+                this.outputs[i].amount -= satoshis
+                break
+            }
+        }
+    }
+
     public getFeeSats() 
     {
         return Math.ceil(this.vBytes() * (this.fee??1))

@@ -30,3 +30,11 @@ export interface OutputTransaction {
     address: string;
     amount: number;
 }
+
+export interface TXOptions {
+    version?: number;
+    locktime?: number;
+    whoPayTheFee?: string;
+    fee?: number;
+}
+

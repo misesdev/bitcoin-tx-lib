@@ -182,7 +182,7 @@ export function isEqual(...arrays: Uint8Array[]): boolean {
     return result
 }
 
-export function numberToVarTnt(value: number): Uint8Array {
+export function numberToVarint(value: number): Uint8Array {
 
     let result: Uint8Array
     if (value < 0xfd) {

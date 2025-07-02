@@ -9,7 +9,7 @@ import {
     mergeUint8Arrays, 
     numberToHex, 
     numberToHexLE, 
-    numberToVarTnt, 
+    numberToVarint, 
     reverseEndian, 
     reverseHexLE, 
     ripemd160, 
@@ -173,15 +173,15 @@ describe("utils", () => {
     })
 
     test("convert a number to little-endian varint", () => {
-        let result = numberToVarTnt(250)
+        let result = numberToVarint(250)
         
         expect("fa").toBe(bytesToHex(result))
 
-        result = numberToVarTnt(255)
+        result = numberToVarint(255)
 
         expect("fdff")
 
-        result = numberToVarTnt(300)
+        result = numberToVarint(300)
 
         expect("fd2c01")
     })

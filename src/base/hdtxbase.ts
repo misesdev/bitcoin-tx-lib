@@ -5,50 +5,49 @@ import { Address } from "../utils/address"
 import { ByteBuffer } from "../utils/buffer"
 import { addressToScriptPubKey } from "../utils/txutils"
 
-export abstract class BaseTransaction 
+export abstract class HDTransactionBase 
 {
     public version: number = 2 
     public locktime: number = 0
-    public inputs: InputTransaction[] = []
-    public outputs: OutputTransaction[] =[]
-    protected fee?: number
+    protected inputs: InputTransaction[] = []
+    protected outputs: OutputTransaction[] =[]
+    protected pairKeys: Map<string, ECPairKey>
     protected whoPayTheFee?: string
-    protected cachedata: any = {}
-    protected pairKey: ECPairKey
+    protected fee?: number
 
-    constructor(pairKey: ECPairKey, options?: TXOptions)
+    constructor(options?: TXOptions)
     {
-        this.pairKey = pairKey
+        this.pairKeys = new Map()
         this.version = options?.version ?? 2
         this.locktime = options?.locktime ?? 0
         this.whoPayTheFee = options?.whoPayTheFee
         this.fee = options?.fee
     }
 
-    public addInput(input: InputTransaction) 
+    public addInput(input: InputTransaction, pairkey: ECPairKey) 
     { 
-        if(this.inputs.some(i => i.txid == input.txid))
-        throw new Error("An input with this txid has already been added")
         if(getBytesCount(input.txid) != 32)
-        throw new Error("Expected a valid txid")
+            throw new Error("Expected a valid txid")
         else if(!input.scriptPubKey)
-        throw new Error("Expected scriptPubKey")
+            throw new Error("Expected scriptPubKey")
+        if(this.inputs.some(i => i.txid == input.txid))
+            throw new Error("An input with this txid has already been added")
 
         // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
-        if(!input.sequence)
-        input.sequence = "fffffffd"
+        if(!input.sequence) input.sequence = "fffffffd"
 
+        this.pairKeys.set(input.txid, pairkey)
         this.inputs.push(input)
     }
 
     public addOutput(output: OutputTransaction) 
     {
-        if(this.outputs.some(o => o.address == output.address))
-        throw new Error("An output with this address has already been added")
-        if(!Address.isValid(output.address))
-        throw new Error("Expected a valid address to output")
         if(output.amount <= 0)
-        throw new Error("Expected a valid amount")
+            throw new Error("Expected a valid amount")
+        if(!Address.isValid(output.address))
+            throw new Error("Expected a valid address to output")
+        if(this.outputs.some(o => o.address == output.address))
+            throw new Error("An output with this address has already been added")
 
         this.outputs.push(output)
     }
@@ -64,5 +63,3 @@ export abstract class BaseTransaction
         return ByteBuffer.merge(rows)
     }
 }
-
-
