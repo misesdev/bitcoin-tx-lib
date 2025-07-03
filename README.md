@@ -51,9 +51,11 @@ with no reliance on native modules.
     const pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ")
 
     // private key hexadecimal Uint8Array 
+    // use the `Hex` suffix to get a hexadecimal string example getPrivateKeyHex()
     const privateKey: string = pairKey.getPrivateKey()
 
-    // get hexadecimal public key Uint8Array
+    // get hexadecimal public key Uint8Array 
+    // use the `Hex` suffix to get a hexadecimal string example getPublicKeyHex()
     const publicKey: string = pairKey.getPublicKey()
 
     // get address 
@@ -63,7 +65,7 @@ with no reliance on native modules.
 
 # How to set up a transaction
 
-#### Transaction 
+### Transaction 
 
 Currently, only P2PKH and P2WPKH transaction types are accepted.
 The Transaction class recognizes and processes them automatically.
@@ -144,11 +146,10 @@ call the `resolveFee()` method:
     // Decrements the output fee for "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf" as defined 
     // in the whoPayTheFee property of Transaction
     transaction.resolveFee() 
-    // Now, The execution of resolveFee
 
     const row = transaction.getRawHex()
 ```
->   Now, The execution of resolveFee() is unecessary, it will be executed automatically if you have passed the 
+>   Now, the execution of resolveFee() is unecessary, it will be executed automatically if you have passed the 
 `whoPayTheFee` and `fee` parameters. now just run getRawHex().
 
 You can set `whoPayTheFee` to `"everyone"`, so when `resolveFee()` is executed, the fee will
