@@ -23,6 +23,8 @@ with no reliance on native modules.
     npm install bitcoin-tx-lib
 ```
 
+`Sample examples`
+
 ## Manage Pair Key
 
 #### How to create and import key pair from different sources
@@ -48,14 +50,11 @@ with no reliance on native modules.
 ```typescript
     const pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ")
 
-    // private key hexadecimal 
-    const privateKey: string = pairKey.privateKey
+    // private key hexadecimal Uint8Array 
+    const privateKey: string = pairKey.getPrivateKey()
 
-    // get hexadecimal complete public key elliptic curve 0x04 + X + Y
+    // get hexadecimal public key Uint8Array
     const publicKey: string = pairKey.getPublicKey()
-
-    // get hexadecimal compressed public key elliptic curve 0x02 + X 
-    const publicKey: string = pairKey.getPublicKeyCompressed()
 
     // get address 
     const address = pairKey.getAddress("p2wpkh")
@@ -99,7 +98,7 @@ The Transaction class recognizes and processes them automatically.
         value: 1000 // Amount in sats
     })
 
-    var transactionRow = transaction.build() // return transaction raw hexadecimal signed
+    var transactionRow = transaction.getRawHex() // return transaction raw in string hexadecimal signed
     /*
         transactionRow: 02000000000101c6be2d35cce2b9def60ea1d1923bc6566fc2c8d30fb3d76a843
         92343855ead6f0100000000ffffffff01d00c000000000000160014aec042df56d9dc2fad0b30faf6
@@ -144,9 +143,13 @@ call the `resolveFee()` method:
     })
     // Decrements the output fee for "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf" as defined 
     // in the whoPayTheFee property of Transaction
-    transaction.resolveFee()
-    const row = transaction.build()
+    transaction.resolveFee() 
+    // Now, The execution of resolveFee
+
+    const row = transaction.getRawHex()
 ```
+>   Now, The execution of resolveFee() is unecessary, it will be executed automatically if you have passed the 
+`whoPayTheFee` and `fee` parameters. now just run getRawHex().
 
 You can set `whoPayTheFee` to `"everyone"`, so when `resolveFee()` is executed, the fee will
 be evenly distributed among all transaction outputs. For example, if the fee is 240 satoshis 
@@ -163,9 +166,9 @@ and the transaction has 2 outputs, each output will pay 120 satoshis.
 
 ```
 
-
-**Note**: By default, the transaction is created with Replace-By-Fee enabled to 
+`**Note**`: By default, the transaction is created with Replace-By-Fee enabled to 
 prevent it from getting stuck in the mempool due to very low fees. This allows you 
 to rebuild the same transaction with a higher fee and send it again, overwriting 
 the previous one. To disable Replace-By-Fee, simply set the 
 sequence to 0xffffffff in the input.
+
