@@ -23,8 +23,6 @@ with no reliance on native modules.
     npm install bitcoin-tx-lib
 ```
 
-`Sample examples`
-
 ## Manage Pair Key
 
 #### How to create and import key pair from different sources
@@ -73,9 +71,7 @@ The Transaction class recognizes and processes them automatically.
 ```typescript
     import { ECPairKey, Transaction } from 'bitcoin-tx-lib'
 
-    var pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ", {
-        network: "testnet"
-    })
+    var pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ")
 
     var transaction = new Transaction(pairKey)
 
