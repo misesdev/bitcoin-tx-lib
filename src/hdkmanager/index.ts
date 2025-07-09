@@ -1,6 +1,6 @@
 import { HDKey } from "@scure/bip32";
 import { bytesToHex } from "../utils";
-import { mnemonicToSeedSync } from "bip39";
+import { mnemonicToSeedSync } from "@scure/bip39"
 import { ECPairKey } from "../ecpairkey";
 import { BNetwork } from "../types";
 

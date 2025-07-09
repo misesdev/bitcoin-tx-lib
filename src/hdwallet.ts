@@ -1,6 +1,8 @@
 import { ECPairKey } from "./ecpairkey";
 import { HDKManager, PathOptions } from "./hdkmanager";
-import {  generateMnemonic, validateMnemonic } from "bip39"
+import { randomBytes } from "@noble/hashes/utils"
+import { generateMnemonic, validateMnemonic } from "@scure/bip39"
+import { wordlist } from '@scure/bip39/wordlists/english';
 import { BNetwork, TypeAddress } from "./types";
 import { Address } from "./utils/address";
 import { bytesToHex } from "./utils";
@@ -41,7 +43,7 @@ export class HDWallet
      */
     public static create(password?: string, options?: HDWalletOptions) : HDWalletData
     {
-        const mnemonic = generateMnemonic(128)
+        const mnemonic = generateMnemonic(wordlist, 256)
         const hdwallet = new HDWallet(HDKManager.fromMnemonic(mnemonic, password), options)
         return { mnemonic, hdwallet }
     }
@@ -59,7 +61,7 @@ export class HDWallet
 
         if(trimmed.split(/\s+/).length > 1) 
         {
-            if(!validateMnemonic(trimmed))
+            if(!validateMnemonic(trimmed, wordlist))
                 throw new Error("Invalid seed phrase (mnemonic)")
 
             const hdwallet = new HDWallet(HDKManager.fromMnemonic(trimmed, password), options)

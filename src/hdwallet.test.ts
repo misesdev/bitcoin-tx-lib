@@ -1,8 +1,9 @@
 import { HDWallet } from "./hdwallet";
 import { BNetwork } from "./types";
+import { bytesToHex } from "./utils";
 
-jest.mock("bip39", () => ({
-    ...jest.requireActual("bip39"),
+jest.mock("@scure/bip39", () => ({
+    ...jest.requireActual("@scure/bip39"),
     generateMnemonic: jest.fn(() => "visit tube task scout glass push sunny number top truck anchor hood")
 }));
 
@@ -10,8 +11,15 @@ const validMnemonic = "visit tube task scout glass push sunny number top truck a
 const validXPriv = "xprv9s21ZrQH143K2LQXAHgER7W7Sije5ovKHnqhurYDXSBYYLYKxxApnNo9i9mFrUFMxvKJAYhbZbB2USWZAYtgqZ8vaB8QqareQaSU8M1B3UC";
 const validXPub = "xpub661MyMwAqRbcEpUzGKDEnFSqzka8VGeAf1mJiEwq5miXR8sUWVV5LB7dZUACgNFBxcuESbK7L3UtR8N3dFVdydEEztkuGVvjKz8MBVd5s8K";
 const network: BNetwork = "testnet";
+    
+const { mnemonic, hdwallet } = HDWallet.create();
+// const addresses = hdwallet.listAddresses(10)
+// addresses.forEach(a => console.log(a))
+console.log(bytesToHex(hdwallet.getMasterPrivateKey()))
+console.log(mnemonic)
 
 describe("HDWallet", () => {
+
     describe("create()", () => {
         test("should create a wallet with mnemonic", () => {
             const { mnemonic, hdwallet } = HDWallet.create(undefined, { network });
