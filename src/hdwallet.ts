@@ -5,8 +5,6 @@ import { BNetwork, TypeAddress } from "./types";
 import { Address } from "./utils/address";
 import { bytesToHex } from "./utils";
 
-const defaultTypeAddress: TypeAddress = "p2wpkh"
-
 interface HDWalletOptions {
     network: BNetwork,
 }
@@ -102,20 +100,24 @@ export class HDWallet
      * @param options Address type options (p2wpkh, p2pkh, etc).
      * @param pathOptions Optional derivation path configuration.
      */
-    public listAddresses(quantity: number, type: TypeAddress, pathOptions?: PathOptions) : string[]
+    public listAddresses(quantity: number, pathOptions?: PathOptions) : string[]
     {
+        const getTypeAddreee = (): TypeAddress => {
+            return this._hdkManager.purpose == 84 ? "p2wpkh" : "p2pkh"
+        }
+
         if(this.isWatchOnly) {
             return this._hdkManager.deriveMultiplePublicKeys(quantity, pathOptions)
                 .map(pubkey => Address.fromPubkey({
                     pubkey: bytesToHex(pubkey),
-                    type: type ?? defaultTypeAddress
+                    type: getTypeAddreee() 
                 }))
         }
 
         return this._hdkManager.derivateMultiplePairKeys(quantity, {
                 network: this.network 
             }, pathOptions)
-            .map(pair => pair.getAddress(type))
+            .map(pair => pair.getAddress(getTypeAddreee()))
     }
 
     /**
@@ -124,9 +126,9 @@ export class HDWallet
      * @param type Address type options (p2wpkh, p2pkh, etc).
      * @param account Account index (default is 0).
      */
-    public listReceiveAddresses(quantity: number, type: TypeAddress, account: number = 0) 
+    public listReceiveAddresses(quantity: number, account: number = 0) 
     {
-        return this.listAddresses(quantity, type, { account, change: 0 })
+        return this.listAddresses(quantity, { account, change: 0 })
     }
 
     /**
@@ -135,28 +137,31 @@ export class HDWallet
      * @param type Address type options (p2wpkh, p2pkh, etc).
      * @param account Account index (default is 0).
      */
-    public listChangeAddresses(quantity: number, type: TypeAddress, account: number = 0) 
+    public listChangeAddresses(quantity: number, account: number = 0) 
     {
-        return this.listAddresses(quantity, type, { account, change: 1 })
+        return this.listAddresses(quantity, { account, change: 1 })
     }
 
     /**
      * Derives a single address by index.
      */
-    public getAddress(index: number, type: TypeAddress, pathOptions?: PathOptions) : string
+    public getAddress(index: number, pathOptions?: PathOptions) : string
     {
+        const getTypeAddress = (): TypeAddress => {
+            return this._hdkManager.purpose == 84 ? "p2wpkh" : "p2pkh"
+        }
         if(this.isWatchOnly) 
         {
             const pubkey = this._hdkManager.derivatePublicKey(index, pathOptions)
             return Address.fromPubkey({ 
                 pubkey: bytesToHex(pubkey),
-                type: type ?? defaultTypeAddress,
+                type: getTypeAddress(),
                 network: this.network,
             })
         }
 
         return this.getPairKey(index, pathOptions)
-            .getAddress(type ?? defaultTypeAddress)
+            .getAddress(getTypeAddress())
     }
 
     /** Returns the master private key in base58 (xprv). */

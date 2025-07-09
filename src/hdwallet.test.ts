@@ -56,7 +56,7 @@ describe("HDWallet", () => {
         const { hdwallet } = HDWallet.import(validXPub, "", { network });
 
         test("should return addresses", () => {
-            const addresses = hdwallet.listAddresses(2, "p2wpkh");
+            const addresses = hdwallet.listAddresses(2);
             expect(addresses.length).toBe(2);
             expect(typeof addresses[0]).toBe("string");
         });
@@ -67,7 +67,7 @@ describe("HDWallet", () => {
         });
 
         test("should return address by index", () => {
-            const address = hdwallet.getAddress(0, "p2wpkh");
+            const address = hdwallet.getAddress(0);
             expect(typeof address).toBe("string");
         });
 
@@ -88,7 +88,7 @@ describe("HDWallet", () => {
         const { hdwallet } = HDWallet.import(validMnemonic, "", { network });
 
         test("should return addresses", () => {
-            const addresses = hdwallet.listAddresses(2, "p2wpkh");
+            const addresses = hdwallet.listAddresses(2);
             expect(addresses.length).toBe(2);
         });
 
@@ -129,7 +129,7 @@ describe("HDWallet", () => {
 
         test("should throw on negative index", () => {
             expect(() => hdwallet.getPrivateKey(-1)).toThrow();
-            expect(() => hdwallet.getAddress(-1, "p2wpkh")).toThrow();
+            expect(() => hdwallet.getAddress(-1)).toThrow();
         });
 
         test("should throw on index > 2^31 - 1", () => {

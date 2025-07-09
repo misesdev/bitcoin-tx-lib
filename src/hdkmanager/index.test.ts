@@ -78,7 +78,7 @@ describe('HDKManager', () => {
 
     test('should use default BIP44 path components when not provided', () => {
         const hdk = HDKManager.fromMnemonic(TEST_MNEMONIC);
-        expect(hdk.purpose).toBe(44);
+        expect(hdk.purpose).toBe(84);
         expect(hdk.coinType).toBe(0);
         expect(hdk.account).toBe(0);
         expect(hdk.change).toBe(0);
@@ -88,13 +88,13 @@ describe('HDKManager', () => {
         const masterSeed = mnemonicToSeedSync(TEST_MNEMONIC);
         const hdk = new HDKManager({
             rootKey: HDKey.fromMasterSeed(masterSeed),
-            purpose: 49,
+            purpose: 84,
             coinType: 1,
             account: 2,
             change: 1
         });
 
-        expect(hdk.purpose).toBe(49);
+        expect(hdk.purpose).toBe(84);
         expect(hdk.coinType).toBe(1);
         expect(hdk.account).toBe(2);
         expect(hdk.change).toBe(1);
@@ -103,6 +103,6 @@ describe('HDKManager', () => {
     test('should generate the correct derivation path', () => {
         const hdk = HDKManager.fromMnemonic(TEST_MNEMONIC);
         const path = hdk.getDerivationPath(5);
-        expect(path).toBe("m/44'/0'/0'/0/5");
+        expect(path).toBe("m/84'/0'/0'/0/5");
     });
 });
