@@ -1,6 +1,6 @@
 import { ECPairKey } from "./ecpairkey";
 import { HDKManager, PathOptions } from "./hdkmanager";
-import { BNetwork, TypeAddress } from "./types";
+import { BNetwork } from "./types";
 interface HDWalletOptions {
     network: BNetwork;
 }
@@ -47,25 +47,25 @@ export declare class HDWallet {
      * @param options Address type options (p2wpkh, p2pkh, etc).
      * @param pathOptions Optional derivation path configuration.
      */
-    listAddresses(quantity: number, type: TypeAddress, pathOptions?: PathOptions): string[];
+    listAddresses(quantity: number, pathOptions?: PathOptions): string[];
     /**
      * Returns a list of external (receiving) addresses as per BIP44.
      * @param quantity Number of addresses to return.
      * @param type Address type options (p2wpkh, p2pkh, etc).
      * @param account Account index (default is 0).
      */
-    listReceiveAddresses(quantity: number, type: TypeAddress, account?: number): string[];
+    listReceiveAddresses(quantity: number, account?: number): string[];
     /**
      * Returns a list of internal (change) addresses as per BIP44.
      * @param quantity Number of addresses to return.
      * @param type Address type options (p2wpkh, p2pkh, etc).
      * @param account Account index (default is 0).
      */
-    listChangeAddresses(quantity: number, type: TypeAddress, account?: number): string[];
+    listChangeAddresses(quantity: number, account?: number): string[];
     /**
      * Derives a single address by index.
      */
-    getAddress(index: number, type: TypeAddress, pathOptions?: PathOptions): string;
+    getAddress(index: number, pathOptions?: PathOptions): string;
     /** Returns the master private key in base58 (xprv). */
     getMasterPrivateKey(): Uint8Array;
     /** Returns the master public key in base58 (xpub). */

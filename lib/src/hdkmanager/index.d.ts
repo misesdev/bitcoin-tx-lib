@@ -2,7 +2,7 @@ import { HDKey } from "@scure/bip32";
 import { ECPairKey } from "../ecpairkey";
 import { BNetwork } from "../types";
 interface HDKParams {
-    purpose?: number;
+    purpose?: 44 | 84;
     coinType?: number;
     account?: number;
     change?: number;
@@ -17,7 +17,7 @@ export interface PathOptions {
  */
 export declare class HDKManager {
     /** BIP44 purpose field (default: 44) */
-    purpose: number;
+    purpose: 44 | 84;
     /** BIP44 coin type (default: 0 for Bitcoin) */
     coinType: number;
     /** BIP44 account number (default: 0) */
