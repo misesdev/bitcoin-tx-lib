@@ -1,7 +1,7 @@
 import { HDKey } from "@scure/bip32";
 import { ECPairKey } from "../ecpairkey";
 import { BNetwork } from "../types";
-interface HDKParams {
+export interface HDKParams {
     purpose?: 44 | 84;
     coinType?: number;
     account?: number;
@@ -26,6 +26,8 @@ export declare class HDKManager {
     change: number;
     /** Root HD key derived from the master seed */
     private readonly _rootKey;
+    private static readonly bip44Versions;
+    private static readonly bip84Versions;
     /**
      * Creates a new HDKManager from a master seed.
      * @param params Object containing master seed and optional BIP44 path values.
@@ -35,13 +37,13 @@ export declare class HDKManager {
      * Instantiates HDKManager from a hex-encoded master seed.
      * @param seed Hex string master seed.
      */
-    static fromMasterSeed(masterSeed: Uint8Array): HDKManager;
+    static fromMasterSeed(masterSeed: Uint8Array, options?: HDKParams): HDKManager;
     /**
      * Instantiates HDKManager from a BIP39 mnemonic phrase.
      * @param mnemonic Mnemonic phrase.
      * @param password Optional BIP39 passphrase.
      */
-    static fromMnemonic(mnemonic: string, password?: string): HDKManager;
+    static fromMnemonic(mnemonic: string, passphrase?: string, options?: HDKParams): HDKManager;
     /**
      * Creates an instance from an extended private key (xpriv).
      */
@@ -108,5 +110,5 @@ export declare class HDKManager {
     getMasterPublicKey(): Uint8Array;
     getXPriv(): string;
     getXPub(): string;
+    private static getVersion;
 }
-export {};

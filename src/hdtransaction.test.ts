@@ -8,7 +8,7 @@ describe("transaction class", () => {
     let transaction: HDTransaction 
 
     beforeEach(() => {
-        wallet = HDWallet.create().hdwallet
+        wallet = HDWallet.create().wallet
         transaction = new HDTransaction()
     })
     

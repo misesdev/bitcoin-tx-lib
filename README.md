@@ -1,10 +1,5 @@
 # bitcoin-tx-lib
 
-`note`
-> Do not use in production. Key generation is generating low-entropy keys. Use only for testing.
-We are working to resolve this and make this process more secure for use in a production 
-environment.
-
 A TypeScript library for building Bitcoin transactions, focused on compatibility 
 across any TypeScript environment, with minimal dependencies and built in pure
 TypeScript. Fully compatible with React, React Native, and any TypeScript projects, 

@@ -4,7 +4,7 @@ import { mnemonicToSeedSync } from "@scure/bip39"
 import { ECPairKey } from "../ecpairkey";
 import { BNetwork } from "../types";
 
-interface HDKParams {
+export interface HDKParams {
     purpose?: 44 | 84;
     coinType?: number;
     account?: number;
@@ -32,6 +32,8 @@ export class HDKManager {
     /** Root HD key derived from the master seed */
     private readonly _rootKey: HDKey;
     
+    private static readonly bip44Versions = { private: 0x0488ade4, public: 0x0488b21e };
+    private static readonly bip84Versions = { private: 0x04b2430c, public: 0x04b24746 };
     /**
      * Creates a new HDKManager from a master seed.
      * @param params Object containing master seed and optional BIP44 path values.
@@ -49,9 +51,10 @@ export class HDKManager {
      * Instantiates HDKManager from a hex-encoded master seed.
      * @param seed Hex string master seed.
      */
-    public static fromMasterSeed(masterSeed: Uint8Array) : HDKManager
+    public static fromMasterSeed(masterSeed: Uint8Array, options?: HDKParams) : HDKManager
     {
-        const rootKey = HDKey.fromMasterSeed(masterSeed)
+        const rootKey = HDKey.fromMasterSeed(masterSeed, this.getVersion(options))
+
         return new HDKManager({ rootKey }) 
     }
 
@@ -60,10 +63,10 @@ export class HDKManager {
      * @param mnemonic Mnemonic phrase.
      * @param password Optional BIP39 passphrase.
      */
-    public static fromMnemonic(mnemonic: string, password?: string) : HDKManager
+    public static fromMnemonic(mnemonic: string, passphrase?: string, options?: HDKParams) : HDKManager
     {
-        const masterSeed = mnemonicToSeedSync(mnemonic, password)
-        const rootKey = HDKey.fromMasterSeed(masterSeed)
+        const masterSeed = mnemonicToSeedSync(mnemonic, passphrase)
+        const rootKey = HDKey.fromMasterSeed(masterSeed, this.getVersion(options))
         return new HDKManager({ rootKey })
     }
 
@@ -267,4 +270,13 @@ export class HDKManager {
     {
         return this._rootKey.publicExtendedKey
     }
+
+    private static getVersion(options?: HDKParams) {
+        if(options?.purpose == 44)
+            return this.bip44Versions
+        if(options?.purpose == 84)
+            return this.bip84Versions
+        return this.bip84Versions
+    }
+
 }

@@ -1,19 +1,20 @@
 import { ECPairKey } from "./ecpairkey";
-import { HDKManager, PathOptions } from "./hdkmanager";
-import { randomBytes } from "@noble/hashes/utils"
+import { HDKManager, HDKParams, PathOptions } from "./hdkmanager";
 import { generateMnemonic, validateMnemonic } from "@scure/bip39"
 import { wordlist } from '@scure/bip39/wordlists/english';
 import { BNetwork, TypeAddress } from "./types";
 import { Address } from "./utils/address";
 import { bytesToHex } from "./utils";
+import { randomBytes } from "@noble/hashes/utils";
 
 interface HDWalletOptions {
     network: BNetwork,
+    purpose?: 44 | 84
 }
 
 export interface HDWalletData {
     mnemonic?: string;
-    hdwallet: HDWallet;
+    wallet: HDWallet;
 }
 
 /**
@@ -41,11 +42,14 @@ export class HDWallet
      * @param options Network options.
      * @returns Object containing the mnemonic and wallet instance.
      */
-    public static create(password?: string, options?: HDWalletOptions) : HDWalletData
+    public static create(passphrase?: string, options?: HDWalletOptions) : HDWalletData
     {
-        const mnemonic = generateMnemonic(wordlist, 256)
-        const hdwallet = new HDWallet(HDKManager.fromMnemonic(mnemonic, password), options)
-        return { mnemonic, hdwallet }
+        const mnemonic = generateMnemonic(wordlist, 128)
+        const hdkeyManager = HDKManager.fromMnemonic(mnemonic, passphrase, {
+            purpose: options?.purpose ?? 84
+        } as HDKParams)
+        const wallet = new HDWallet(hdkeyManager, options)
+        return { mnemonic, wallet }
     }
 
     /**
@@ -64,18 +68,18 @@ export class HDWallet
             if(!validateMnemonic(trimmed, wordlist))
                 throw new Error("Invalid seed phrase (mnemonic)")
 
-            const hdwallet = new HDWallet(HDKManager.fromMnemonic(trimmed, password), options)
-            return { mnemonic: trimmed, hdwallet }
+            const wallet = new HDWallet(HDKManager.fromMnemonic(trimmed, password), options)
+            return { mnemonic: trimmed, wallet }
         }
 
         if (/^(xprv|tprv)[a-zA-Z0-9]+$/.test(trimmed)) {
-            const hdwallet = new HDWallet(HDKManager.fromXPriv(trimmed), options)
-            return { hdwallet }
+            const wallet = new HDWallet(HDKManager.fromXPriv(trimmed), options)
+            return { wallet }
         }
 
         if (/^(xpub|tpub)[a-zA-Z0-9]+$/.test(trimmed)) {
-            const hdwallet = new HDWallet(HDKManager.fromXPub(trimmed), options)
-            return { hdwallet }
+            const wallet = new HDWallet(HDKManager.fromXPub(trimmed), options)
+            return { wallet }
         }
 
         throw new Error("Unsupported or invalid HD wallet data format, expected mnemonic, xpriv or xpub.");

@@ -3,10 +3,11 @@ import { HDKManager, PathOptions } from "./hdkmanager";
 import { BNetwork } from "./types";
 interface HDWalletOptions {
     network: BNetwork;
+    purpose?: 44 | 84;
 }
 export interface HDWalletData {
     mnemonic?: string;
-    hdwallet: HDWallet;
+    wallet: HDWallet;
 }
 /**
  * HDWallet encapsulates an HD key manager, providing key and address derivation
@@ -25,7 +26,7 @@ export declare class HDWallet {
      * @param options Network options.
      * @returns Object containing the mnemonic and wallet instance.
      */
-    static create(password?: string, options?: HDWalletOptions): HDWalletData;
+    static create(passphrase?: string, options?: HDWalletOptions): HDWalletData;
     /**
      * Imports a wallet from mnemonic, xpriv, or xpub.
      * @param input String representing the mnemonic, xpriv, or xpub.
