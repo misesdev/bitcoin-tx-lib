@@ -39,7 +39,7 @@ export class HDKManager {
     constructor(params: HDKParams) 
     {
         this._rootKey = params.rootKey 
-        this.purpose = params.purpose ?? 44
+        this.purpose = params.purpose ?? 84
         this.coinType = params.coinType ?? 0
         this.account = params.account ?? 0
         this.change = params.change ?? 0

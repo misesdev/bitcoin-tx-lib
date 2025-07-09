@@ -8,7 +8,7 @@ import { bytesToHex } from "./utils";
 const defaultTypeAddress: TypeAddress = "p2wpkh"
 
 interface HDWalletOptions {
-    network: BNetwork
+    network: BNetwork,
 }
 
 export interface HDWalletData {
