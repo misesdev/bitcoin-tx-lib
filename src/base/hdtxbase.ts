@@ -1,7 +1,8 @@
 import { ECPairKey } from "../ecpairkey"
 import { InputTransaction, OutputTransaction, TXOptions } from "../types"
-import { hexToBytes, numberToHexLE, numberToVarint } from "../utils"
+import { bytesToHex, hexToBytes, numberToHexLE, numberToVarint } from "../utils"
 import { ByteBuffer } from "../utils/buffer"
+import { addressToScriptPubKey } from "../utils/txutils"
 import { BuildFormat, TransactionBuilder } from "./txbuilder"
 
 /**
@@ -58,6 +59,9 @@ export abstract class HDTransactionBase extends TransactionBuilder
     public addInput(input: InputTransaction, pairkey: ECPairKey) 
     { 
         this.validateInput(input, this.inputs)
+        
+        if(!input.scriptPubKey)
+            input.scriptPubKey = bytesToHex(addressToScriptPubKey(pairkey.getAddress()))
 
         // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
         if(!input.sequence) input.sequence = "fffffffd"

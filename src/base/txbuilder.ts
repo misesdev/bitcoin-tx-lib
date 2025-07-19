@@ -38,7 +38,7 @@ export abstract class TransactionBuilder
      */
     public isSegwitInput(input: InputTransaction) : boolean 
     {
-        const bytes = hexToBytes(input.scriptPubKey)
+        const bytes = hexToBytes(input.scriptPubKey as string)
     
         return ((bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14) || // P2WPKH
             (bytes.length === 34 && bytes[0] == 0x00 && bytes[1] == 0x20))       // P2WSH
@@ -107,7 +107,7 @@ export abstract class TransactionBuilder
             hexTransaction.append(hexToBytes(txin.txid).reverse()) // txid
             hexTransaction.append(numberToHexLE(txin.vout, 32)) // index output (vout)
             if(txin.txid === input.txid) {
-                let script = hexToBytes(txin.scriptPubKey)
+                let script = hexToBytes(txin.scriptPubKey as string)
                 hexTransaction.append(numberToVarint(script.length))
                 hexTransaction.append(script)
             } else
@@ -166,7 +166,7 @@ export abstract class TransactionBuilder
         hexTransaction.append(hexToBytes(input.txid).reverse())
         hexTransaction.append(numberToHexLE(input.vout, 32))
         // script code
-        let scriptCode = scriptPubkeyToScriptCode(input.scriptPubKey)
+        let scriptCode = scriptPubkeyToScriptCode(input.scriptPubKey as string)
         hexTransaction.append(scriptCode)
         // amount
         hexTransaction.append(numberToHexLE(input.value, 64))
@@ -222,10 +222,12 @@ export abstract class TransactionBuilder
      */
     protected validateInput(input: InputTransaction, inputs: InputTransaction[]) : void
     {
-        if(getBytesCount(input.txid) != 32)
-            throw new Error("Expected a valid txid")
-        else if(!input.scriptPubKey)
-            throw new Error("Expected scriptPubKey")
+        if(input.txid.length % 2 != 0)
+            throw new Error("txid is in invalid format, expected a hexadecimal string")
+        else if(getBytesCount(input.txid) != 32)
+            throw new Error("Expected a valid txid with 32 bytes")
+        else if(input.scriptPubKey && input.scriptPubKey.length % 2 != 0)
+            throw new Error("scriptPubKey is in invalid format, expected a hexadecimal string") 
         if(inputs.some(i => i.txid == input.txid))
             throw new Error("An input with this txid has already been added")
     }

@@ -1,5 +1,7 @@
 import { ECPairKey } from "../ecpairkey"
 import { InputTransaction, OutputTransaction, TXOptions } from "../types"
+import { bytesToHex } from "../utils"
+import { addressToScriptPubKey } from "../utils/txutils"
 import { BuildFormat, SigParams, TransactionBuilder } from "./txbuilder"
 
 /**
@@ -55,6 +57,9 @@ export abstract class BaseTransaction extends TransactionBuilder
     public addInput(input: InputTransaction) 
     { 
         this.validateInput(input, this.inputs)
+
+        if(!input.scriptPubKey)
+            input.scriptPubKey = bytesToHex(addressToScriptPubKey(this.pairKey.getAddress()))
 
         // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
         if(!input.sequence) input.sequence = "fffffffd"

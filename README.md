@@ -80,7 +80,6 @@ The Transaction class recognizes and processes them automatically.
 
     transaction.addInput({
         txid: "157da15b3cdb2561602bd889d578227aa089915e3945c6d26569d27aecb9a4f7",
-        scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9",
         value: 15197, 
         vout: 1
     })
@@ -125,7 +124,6 @@ call the `resolveFee()` method:
     
     transaction.addInput({
         txid: "16945364992874171da102f987c217f3ff13bb4817957f6a030169083a8ac8f0",
-        scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9",
         value: 30000, // total input value 
         vout: 1
     })

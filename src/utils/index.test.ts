@@ -10,8 +10,6 @@ import {
     numberToHex, 
     numberToHexLE, 
     numberToVarint, 
-    reverseEndian, 
-    reverseHexLE, 
     ripemd160, 
     sha256 
 } from "./index"
@@ -92,21 +90,21 @@ describe("utils", () => {
         expect(bytesToHex(hash)).toBe("58077dda57de14ac9f055c64bf3c71ff0b5796da")
     })
 
-    test("reverse endian bytes", () => {
-        const bytes = new Uint8Array(4)
+    // test("reverse endian bytes", () => {
+    //     const bytes = new Uint8Array(4)
 
-        bytes[0] = 0x80
-        bytes[1] = 0x45
-        bytes[2] = 0xf8
-        bytes[3] = 0xff
+    //     bytes[0] = 0x80
+    //     bytes[1] = 0x45
+    //     bytes[2] = 0xf8
+    //     bytes[3] = 0xff
 
-        const letleEndian = reverseEndian(bytes)
+    //     const letleEndian = reverseEndian(bytes)
 
-        expect(letleEndian[0]).toBe(0xff)
-        expect(letleEndian[1]).toBe(0xf8)
-        expect(letleEndian[2]).toBe(0x45)
-        expect(letleEndian[3]).toBe(0x80)
-    })
+    //     expect(letleEndian[0]).toBe(0xff)
+    //     expect(letleEndian[1]).toBe(0xf8)
+    //     expect(letleEndian[2]).toBe(0x45)
+    //     expect(letleEndian[3]).toBe(0x80)
+    // })
 
     test("convert a number integer in hexadecimal", () => {
         let hexNumber = numberToHex(1, 32) // 32bits
@@ -137,12 +135,12 @@ describe("utils", () => {
         expect(script).toBe("76a9146bf19e55f94d986b4640c154d86469934191951188ac")
     })
 
-    test("convert hexadecimal string bytes in little-endian", () => {
+    // test("convert hexadecimal string bytes in little-endian", () => {
 
-        let little = reverseHexLE(new Uint8Array([0xff, 0x80, 0x99])) as Uint8Array
+    //     let little = reverseHexLE(new Uint8Array([0xff, 0x80, 0x99])) as Uint8Array
 
-        expect(bytesToHex(little)).toBe("9980ff")
-    })
+    //     expect(bytesToHex(little)).toBe("9980ff")
+    // })
 
     test("merge Uint8Arrays", () => {
         let arr1 = new Uint8Array([0x01, 0x05])

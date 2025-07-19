@@ -3,8 +3,6 @@ import { ripemd160 as ripemd160Noble } from "@noble/hashes/legacy"
 import { sha256 as sha256Noble } from "@noble/hashes/sha2"
 import { Hex } from "../types"
 
-export type Response = "hex" | "bytes"
-
 export function bytesToHex(bytes: Uint8Array): string {
 
     if (bytes.length <= 0)
@@ -79,18 +77,18 @@ export function checksum(message: Uint8Array, bytes: number = 4): Uint8Array {
     return hash
 }
 
-export function reverseEndian(hex: Hex): Hex {
+// export function reverseEndian(hex: Hex): Hex {
 
-    if(typeof(hex) == "object")
-        return hex.reverse()
+//     if(typeof(hex) == "object")
+//         return hex.reverse()
 
-    let hexLE = ""
-        
-    for (let i = hex.length; i > 0; i -= 2) 
-        hexLE += hex[i - 2] + hex[i - 1]
+//     let hexLE = ""
+//         
+//     for (let i = hex.length; i > 0; i -= 2) 
+//         hexLE += hex[i - 2] + hex[i - 1]
 
-    return hexLE
-}
+//     return hexLE
+// }
 
 export function numberToHex(number: number = 0, bits: number = 64): Uint8Array {
 
@@ -140,23 +138,6 @@ export function hash160ToScript(hash160: Hex): Hex {
     return hexScript
 }
 
-export function reverseHexLE(hex: Hex, isBytes: boolean = true) : Hex {
-    
-    if (isBytes && hex.length <= 0)
-        throw new Error("Invalid hex value!")
-
-    if(typeof(hex) == "object")
-        return hex.reverse()
-
-    let hexLE = ''
-
-    for (let i = hex.length; i > 0; i -= 2) 
-        hexLE += hex[i - 2] + hex[i - 1]
-
-    // return hexadecimal bytes in little-endian
-    return hexLE
-}
-
 export function mergeUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
     let length = arrays.reduce((sum, e) => sum + e.length, 0)
     let mergeArray = new Uint8Array(length)
@@ -203,5 +184,7 @@ export function numberToVarint(value: number): Uint8Array {
 
 export function getBytesCount(hex: string) : number 
 {
+    if(hex.length % 2 != 0)
+        throw new Error("invalid hexadecimal string value")
     return hex.length / 2;
 }

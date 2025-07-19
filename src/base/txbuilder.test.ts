@@ -89,11 +89,6 @@ describe("TransactionBuilder", () => {
         expect(() => builder.testValidateInput(input, [])).toThrow("Expected a valid txid")
     })
 
-    test("throws on missing scriptPubKey", () => {
-        const input = { ...baseInput, scriptPubKey: "" }
-        expect(() => builder.testValidateInput(input, [])).toThrow("Expected scriptPubKey")
-    })
-
     test("throws on duplicated txid", () => {
         expect(() => builder.testValidateInput(baseInput, [baseInput])).toThrow("already been added")
     })

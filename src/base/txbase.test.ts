@@ -39,11 +39,15 @@ describe("BaseTransaction", () => {
     })
 
     test("addInput throws on invalid txid length", () => {
-        expect(() => tx.addInput({ ...validInput, txid: "abc" })).toThrow("Expected a valid txid")
+        expect(() => tx.addInput({ ...validInput, txid: "abc" }))
+            .toThrow("txid is in invalid format, expected a hexadecimal string")
+        expect(() => tx.addInput({ ...validInput, txid: "abcd" }))
+            .toThrow("Expected a valid txid with 32 bytes")
     })
 
     test("addInput throws on missing scriptPubKey", () => {
-        expect(() => tx.addInput({ ...validInput, scriptPubKey: "" })).toThrow("Expected scriptPubKey")
+        expect(() => tx.addInput({ ...validInput, scriptPubKey: "sdc" }))
+            .toThrow("scriptPubKey is in invalid format, expected a hexadecimal string")
     })
 
     test("addInput throws on duplicate txid", () => {
