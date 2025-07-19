@@ -80,6 +80,7 @@ The Transaction class recognizes and processes them automatically.
 
     transaction.addInput({
         txid: "157da15b3cdb2561602bd889d578227aa089915e3945c6d26569d27aecb9a4f7",
+        scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9", // optional
         value: 15197, 
         vout: 1
     })
@@ -109,6 +110,8 @@ The Transaction class recognizes and processes them automatically.
         txid: 7c850c5f558d3ea982f2b1a940f4ec40104841793029302fbcb8958595066eaf
    */
 ```
+> Now if `scriptPubkey` is not passed as a parameter it will be automatically generated 
+from the key pair
 
 ### Network fee
 
