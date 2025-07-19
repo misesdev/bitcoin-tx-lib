@@ -7,6 +7,7 @@ export * from "./src/hdtransaction"
 export * from "./src/hdwallet"
 
 export * from "./src/utils/address"
+export * from "./src/utils/mnemonic"
 
 export * from "./src/utils"
 

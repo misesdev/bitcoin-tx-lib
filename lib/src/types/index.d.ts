@@ -14,7 +14,7 @@ export interface ECOptions {
 export interface InputTransaction {
     txid: string;
     vout: number;
-    scriptPubKey: string;
+    scriptPubKey?: string;
     sequence?: string;
     value: number;
 }
