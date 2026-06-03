@@ -33,20 +33,13 @@ export class ECPairKey {
     * Signs a message hash and returns the DER-encoded signature.
     * @param message Hash of the message to sign.
     */
-    public signDER(message: Uint8Array) : Uint8Array 
+    public signDER(message: Uint8Array) : Uint8Array
     {
-        // generate signatures until it is small
-        while(true)
-        {
-            let signature = secp256k1.sign(message, this.privateKey, { 
-                extraEntropy: true, 
-                lowS: true 
-            })
-            signature.normalizeS()
-            let derSignature = signature.toDERRawBytes()
-            if(derSignature.length == 70) 
-                return derSignature
-        }
+        const signature = secp256k1.sign(message, this.privateKey, {
+            extraEntropy: true,
+            lowS: true
+        })
+        return signature.toDERRawBytes()
     }
     
     /**
@@ -61,12 +54,13 @@ export class ECPairKey {
 
     /**
     * Returns the WIF (Wallet Import Format) of the private key.
-    * @param compressed Whether to append 0x01 to indicate compressed public key.
+    * The 0x01 suffix indicates the key produces a compressed public key,
+    * which is required for compatibility with standard Bitcoin wallets.
     */
     public getWif(): string
     {
         const prefix = ECPairKey.wifPrefixes[this.network]
-        const payload = new Uint8Array([prefix, ...this.privateKey])
+        const payload = new Uint8Array([prefix, ...this.privateKey, 0x01])
         const check = checksum(payload) as Uint8Array
         const privateWif = new Uint8Array([...payload, ...check])
         return base58.encode(privateWif)

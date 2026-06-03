@@ -31,7 +31,7 @@ export function hexToBytes(hex: string, hexadecimal: boolean = true): Uint8Array
 
     let bytes = new Uint8Array(hexadecimal ? hex.length / 2 : hex.length)
 
-    for (let i = 0; i <= hex.length; i += hexadecimal ? 2 : 1) 
+    for (let i = 0; i < hex.length; i += hexadecimal ? 2 : 1)
     {
         if (hexadecimal)
             bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16)

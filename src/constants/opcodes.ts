@@ -6,6 +6,6 @@ export const OP_CODES = {
     OP_EQUALVERIFY: 0x88,
     OP_CHECKSIG: 0xac,
     SIGHASH_ALL: 0x01,
-    OP_PUSHBYTES_20: 14,
-    OP_PUSHBYTES_32: 20
+    OP_PUSHBYTES_20: 0x14,
+    OP_PUSHBYTES_32: 0x20
 }

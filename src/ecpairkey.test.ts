@@ -1,16 +1,16 @@
-import { ECPairKey } from "./ecpairkey";
+import { ECPairKey } from "./ecpairkey"
 import { hexToBytes, sha256 } from "./utils"
 import { base58 } from "@scure/base"
 
 describe("ECPairKey", () => {
-    const sampleMessage = hexToBytes("6244980fa0752e5b4643") 
+    const sampleMessage = hexToBytes("6244980fa0752e5b4643")
     const messageHash = sha256(sampleMessage) as Uint8Array
 
     test("should generate a valid keypair and public key", () => {
         const key = new ECPairKey()
         const pubkey = key.getPublicKey()
         expect(pubkey).toBeInstanceOf(Uint8Array)
-        expect(pubkey.length).toBe(33) // Compressed secp256k1 public key
+        expect(pubkey.length).toBe(33)
     })
 
     test("should return public and private keys as hex", () => {
@@ -29,20 +29,22 @@ describe("ECPairKey", () => {
     test("should fail verification with altered message", () => {
         const key = new ECPairKey()
         const signature = key.signDER(messageHash)
-
-        // Mutate the message
         const wrongMessage = new Uint8Array([...messageHash])
         wrongMessage[0] ^= 0xff
+        expect(key.verifySignature(wrongMessage, signature)).toBe(false)
+    })
 
-        const verified = key.verifySignature(wrongMessage, signature)
-        expect(verified).toBe(false)
+    test("should fail verification with a different key", () => {
+        const key1 = new ECPairKey()
+        const key2 = new ECPairKey()
+        const signature = key1.signDER(messageHash)
+        expect(key2.verifySignature(messageHash, signature)).toBe(false)
     })
 
     test("should generate a valid WIF and recover the key", () => {
         const key = new ECPairKey()
         const wif = key.getWif()
         const recovered = ECPairKey.fromWif(wif)
-
         expect(recovered.getPrivateKeyHex()).toBe(key.getPrivateKeyHex())
         expect(recovered.getPublicKeyHex()).toBe(key.getPublicKeyHex())
     })
@@ -51,12 +53,8 @@ describe("ECPairKey", () => {
         const key = new ECPairKey()
         const wif = key.getWif()
         const decoded = base58.decode(wif)
-
-        // Invalida o checksum
         decoded[decoded.length - 1] ^= 0xff
-
         const brokenWif = base58.encode(decoded)
-
         expect(() => ECPairKey.fromWif(brokenWif)).toThrow("Wif type is invalid or not supported")
     })
 
@@ -64,12 +62,8 @@ describe("ECPairKey", () => {
         const key = new ECPairKey()
         const wif = key.getWif()
         const decoded = base58.decode(wif)
-
-        // Prefixo inválido (ex: 0x01)
         decoded[0] = 0x01
-
         const brokenWif = base58.encode(decoded)
-
         expect(() => ECPairKey.fromWif(brokenWif)).toThrow("Wif type is invalid or not supported")
     })
 
@@ -84,15 +78,12 @@ describe("ECPairKey", () => {
         const original = new ECPairKey()
         const hex = original.getPrivateKeyHex()
         const restored = ECPairKey.fromHex(hex)
-
         expect(restored.getPrivateKeyHex()).toBe(hex)
         expect(restored.getPublicKeyHex()).toBe(original.getPublicKeyHex())
     })
 
     test("should reject invalid hex in fromHex", () => {
-        expect(() => {
-            ECPairKey.fromHex("not-a-hex")
-        }).toThrow()
+        expect(() => ECPairKey.fromHex("not-a-hex")).toThrow()
     })
 
     test("should verifyWif correctly", () => {
@@ -100,8 +91,115 @@ describe("ECPairKey", () => {
         const wif = key.getWif()
         const decoded = base58.decode(wif)
         expect(ECPairKey.verifyWif(decoded)).toBe(true)
-
-        decoded[0] = 0x00 // altera prefixo
+        decoded[0] = 0x00
         expect(ECPairKey.verifyWif(decoded)).toBe(false)
+    })
+
+    describe("network-specific WIF prefixes", () => {
+        test("mainnet WIF starts with K or L (compressed)", () => {
+            const key = new ECPairKey({ network: "mainnet" })
+            const wif = key.getWif()
+            expect(wif[0]).toMatch(/^[KL]/)
+        })
+
+        test("testnet WIF starts with c (compressed)", () => {
+            const key = new ECPairKey({ network: "testnet" })
+            const wif = key.getWif()
+            expect(wif[0]).toBe("c")
+        })
+
+        test("WIF round-trip preserves mainnet network", () => {
+            const key = new ECPairKey({ network: "mainnet" })
+            const restored = ECPairKey.fromWif(key.getWif())
+            expect(restored.network).toBe("mainnet")
+            expect(restored.getPrivateKeyHex()).toBe(key.getPrivateKeyHex())
+        })
+
+        test("WIF round-trip preserves testnet network", () => {
+            const key = new ECPairKey({ network: "testnet" })
+            const restored = ECPairKey.fromWif(key.getWif())
+            expect(restored.network).toBe("testnet")
+            expect(restored.getPrivateKeyHex()).toBe(key.getPrivateKeyHex())
+        })
+
+        test("mainnet and testnet WIF are different for the same private key", () => {
+            const privKey = new ECPairKey().getPrivateKey()
+            const mainnet = ECPairKey.fromHex(Buffer.from(privKey).toString("hex"), "mainnet")
+            const testnet = ECPairKey.fromHex(Buffer.from(privKey).toString("hex"), "testnet")
+            expect(mainnet.getWif()).not.toBe(testnet.getWif())
+        })
+    })
+
+    describe("address types and network prefixes", () => {
+        test("mainnet p2wpkh address starts with bc1", () => {
+            const key = new ECPairKey({ network: "mainnet" })
+            expect(key.getAddress("p2wpkh")).toMatch(/^bc1/)
+        })
+
+        test("testnet p2wpkh address starts with tb1", () => {
+            const key = new ECPairKey({ network: "testnet" })
+            expect(key.getAddress("p2wpkh")).toMatch(/^tb1/)
+        })
+
+        test("mainnet p2pkh address starts with 1", () => {
+            const key = new ECPairKey({ network: "mainnet" })
+            expect(key.getAddress("p2pkh")).toMatch(/^1/)
+        })
+
+        test("testnet p2pkh address starts with m or n", () => {
+            const key = new ECPairKey({ network: "testnet" })
+            expect(key.getAddress("p2pkh")).toMatch(/^[mn]/)
+        })
+
+        test("p2wpkh and p2pkh produce different addresses for the same key", () => {
+            const key = new ECPairKey({ network: "mainnet" })
+            expect(key.getAddress("p2wpkh")).not.toBe(key.getAddress("p2pkh"))
+        })
+    })
+
+    describe("DER signature length and validity", () => {
+        test("DER signature is between 70 and 72 bytes", () => {
+            for (let i = 0; i < 20; i++) {
+                const key = new ECPairKey()
+                const sig = key.signDER(messageHash)
+                expect(sig.length).toBeGreaterThanOrEqual(70)
+                expect(sig.length).toBeLessThanOrEqual(72)
+            }
+        })
+
+        test("DER signature starts with 0x30 (SEQUENCE marker)", () => {
+            const key = new ECPairKey()
+            const sig = key.signDER(messageHash)
+            expect(sig[0]).toBe(0x30)
+        })
+
+        test("signature is valid immediately after signing", () => {
+            for (let i = 0; i < 5; i++) {
+                const key = new ECPairKey()
+                const sig = key.signDER(messageHash)
+                expect(key.verifySignature(messageHash, sig)).toBe(true)
+            }
+        })
+    })
+
+    describe("fromHex network parameter", () => {
+        test("fromHex defaults to mainnet", () => {
+            const key = new ECPairKey()
+            const restored = ECPairKey.fromHex(key.getPrivateKeyHex())
+            expect(restored.network).toBe("mainnet")
+        })
+
+        test("fromHex respects explicit testnet parameter", () => {
+            const key = new ECPairKey()
+            const restored = ECPairKey.fromHex(key.getPrivateKeyHex(), "testnet")
+            expect(restored.network).toBe("testnet")
+            expect(restored.getAddress("p2wpkh")).toMatch(/^tb1/)
+        })
+
+        test("fromHex and constructor produce same public key for same private key", () => {
+            const key = new ECPairKey()
+            const fromHex = ECPairKey.fromHex(key.getPrivateKeyHex())
+            expect(fromHex.getPublicKeyHex()).toBe(key.getPublicKeyHex())
+        })
     })
 })

@@ -6,6 +6,7 @@ import { TXOptions } from "./types";
  * weight estimation, and raw hex retrieval.
  */
 export declare class HDTransaction extends HDTransactionBase {
+    private feeResolved;
     /**
      * Constructs a new HDTransaction.
      * @param options Optional transaction parameters (version, locktime, fee, etc.).
@@ -32,7 +33,8 @@ export declare class HDTransaction extends HDTransactionBase {
     isSegwit(): boolean;
     /**
      * Calculates the total weight of the transaction as defined in BIP 141.
-     * Weight = (non-witness bytes * 4) + witness bytes.
+     * Weight = (non-witness bytes * 4) + witness bytes + marker/flag bytes.
+     * Uses cached serialization to avoid re-signing on each call.
      *
      * @throws Error if the transaction is not signed.
      * @returns The transaction weight.
@@ -52,6 +54,7 @@ export declare class HDTransaction extends HDTransactionBase {
      * - If one output: subtracts total fee from that output.
      * - If `whoPayTheFee` is "everyone": splits the fee among all outputs equally.
      * - If `whoPayTheFee` is an address: subtracts full fee from that address.
+     * Idempotent: calling more than once has no additional effect.
      *
      * @throws Error if the transaction is not signed.
      */
@@ -76,4 +79,8 @@ export declare class HDTransaction extends HDTransactionBase {
      * @returns Raw transaction as bytes.
      */
     getRawBytes(): Uint8Array;
+    /**
+     * Clears all inputs, outputs, signing keys, cache data and resets the fee state.
+     */
+    clear(): void;
 }

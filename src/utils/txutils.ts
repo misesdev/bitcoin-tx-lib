@@ -55,7 +55,8 @@ export function scriptPubkeyToScriptCode(script: string) : Uint8Array {
         const scriptCode = mergeUint8Arrays(prefixScript, hash, sufixScript)
         return new Uint8Array([scriptCode.length, ...scriptCode])
     }
-    if(scriptPubkey[0] == 0x79 && scriptPubkey[2] == 0x14) {
+    if(scriptPubkey[0] == 0x00 && scriptPubkey[1] == 0x20) {
+        // P2WSH: OP_0 <32-byte-hash>
         return new Uint8Array([scriptPubkey.length, ...scriptPubkey])
     }
         

@@ -62,12 +62,13 @@ export class HDWallet
     {
         const trimmed = input.trim()
 
-        if(trimmed.split(/\s+/).length > 1) 
+        if(trimmed.split(/\s+/).length > 1)
         {
             if(!MnemonicUtils.validateMnemonic(trimmed))
                 throw new Error("Invalid seed phrase (mnemonic)")
 
-            const wallet = new HDWallet(HDKManager.fromMnemonic(trimmed, password), options)
+            const hdkParams = options?.purpose ? { purpose: options.purpose } as HDKParams : undefined
+            const wallet = new HDWallet(HDKManager.fromMnemonic(trimmed, password, hdkParams), options)
             return { mnemonic: trimmed, wallet }
         }
 

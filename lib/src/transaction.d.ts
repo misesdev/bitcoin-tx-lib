@@ -2,6 +2,7 @@ import { BaseTransaction } from "./base/txbase";
 import { ECPairKey } from "./ecpairkey";
 import { TXOptions } from "./types";
 export declare class Transaction extends BaseTransaction {
+    private feeResolved;
     /**
      * Creates a new Transaction instance.
      * @param pairkey The key pair used to sign the transaction inputs.
@@ -23,7 +24,8 @@ export declare class Transaction extends BaseTransaction {
     getTxid(): string;
     /**
      * Calculates the total weight of the transaction according to BIP 141.
-     * Weight = (non-witness bytes * 4) + witness bytes.
+     * Weight = (non-witness bytes * 4) + witness bytes + marker/flag bytes.
+     * Uses cached serialization to avoid re-signing on each call.
      *
      * @throws Error if the transaction is not signed.
      * @returns The transaction weight.
@@ -42,6 +44,7 @@ export declare class Transaction extends BaseTransaction {
      * If only one output exists, deduct the entire fee from it.
      * If `whoPayTheFee` is "everyone", split the fee evenly among all outputs.
      * If `whoPayTheFee` is an address, deduct the fee from the output matching that address.
+     * Idempotent: calling more than once has no additional effect.
      *
      * @throws Error if the transaction is not signed.
      */
@@ -66,4 +69,8 @@ export declare class Transaction extends BaseTransaction {
      * @returns The raw transaction bytes.
      */
     getRawBytes(): Uint8Array;
+    /**
+     * Clears all inputs, outputs, cache data and resets the fee state.
+     */
+    clear(): void;
 }

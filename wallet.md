@@ -1,254 +1,344 @@
+# Building a Bitcoin Wallet with bitcoin-tx-lib
 
-# Building an HD Bitcoin Wallet with `bitcoin-tx-lib`
-
-This guide explains how to create and manage a complete **Hierarchical Deterministic (HD)** Bitcoin wallet using the `HDWallet` and `HDTransaction` classes from the `bitcoin-tx-lib` library. This includes mnemonic generation, key/address derivation, and transaction creation.
+A practical guide covering the full workflow: wallet creation, address derivation,
+UTXO management, transaction building, and fee handling.
 
 ---
 
 ## Table of Contents
 
-* [Installation](#installation)
-* [Creating a New Wallet](#creating-a-new-wallet)
-* [Importing a Wallet](#importing-a-wallet)
-* [Deriving Addresses](#deriving-addresses)
-
-  * [Receiving Addresses](#receiving-addresses)
-  * [Change Addresses](#change-addresses)
-* [Saving Derived Addresses](#saving-derived-addresses)
-* [Signing Transactions](#signing-transactions)
-* [Getting Transaction Info](#getting-transaction-info)
-* [Fee Calculation](#fee-calculation)
-* [Watch-Only Mode](#watch-only-mode)
-* [API Reference](#api-reference)
+- [Installation](#installation)
+- [Creating a wallet](#creating-a-wallet)
+- [Importing a wallet](#importing-a-wallet)
+- [Deriving addresses](#deriving-addresses)
+- [Building transactions](#building-transactions)
+  - [Single-key transaction (Transaction)](#single-key-transaction)
+  - [Multi-key HD transaction (HDTransaction)](#multi-key-hd-transaction)
+  - [Spending multiple UTXOs from the same parent tx](#spending-multiple-utxos-from-the-same-parent-tx)
+- [Fee management](#fee-management)
+- [Inspecting a signed transaction](#inspecting-a-signed-transaction)
+- [Watch-only wallets](#watch-only-wallets)
+- [Key types reference](#key-types-reference)
+- [Important notes](#important-notes)
 
 ---
 
 ## Installation
 
-You can import the library into your TypeScript/JavaScript project:
+```bash
+npm install bitcoin-tx-lib
+```
 
 ```ts
-import { HDWallet, HDTransaction } from "bitcoin-tx-lib"
+import { HDWallet, HDTransaction, Transaction, ECPairKey } from 'bitcoin-tx-lib'
 ```
 
 ---
 
-## Creating a New Wallet
-
-To create a brand-new HD wallet and generate a 12-word mnemonic:
+## Creating a wallet
 
 ```ts
-const { mnemonic, hdwallet } = HDWallet.create("optional-password", {
-  network: "mainnet" // or "testnet"
+// BIP84 (native SegWit, bc1… addresses) — default
+const { mnemonic, wallet } = HDWallet.create()
+
+// BIP44 (legacy P2PKH, 1… addresses)
+const { mnemonic, wallet } = HDWallet.create(undefined, { purpose: 44 })
+
+// Testnet + passphrase
+const { mnemonic, wallet } = HDWallet.create("my passphrase", {
+    network: "testnet",
+    purpose: 84
 })
 
-console.log("Mnemonic:", mnemonic)
-```
-
-> The generated mnemonic should be securely saved by the user. It can be used to restore the wallet later.
-
----
-
-## Importing a Wallet
-
-You can import an existing wallet using a mnemonic, xpriv, or xpub:
-
-```ts
-const { hdwallet } = HDWallet.import("your mnemonic or xpub/xpriv", "optional-password", {
-  network: "mainnet"
-})
+console.log(mnemonic)        // "word1 word2 … word12"  — SAVE THIS
+console.log(wallet.getXPub())
 ```
 
 ---
 
-## Deriving Addresses
-
-### Receiving Addresses
+## Importing a wallet
 
 ```ts
-const receiveAddresses = hdwallet.listReceiveAddresses(5, "p2wpkh", 0)
-console.log("Receive Addresses:", receiveAddresses)
-```
+// From 12 or 24-word mnemonic
+const { wallet } = HDWallet.import(
+    "word1 word2 … word12",
+    "optional passphrase",
+    { network: "mainnet", purpose: 84 }
+)
 
-### Change Addresses
+// From xprv (full signing capability)
+const { wallet } = HDWallet.import("xprv9s21ZrQH143K…")
 
-```ts
-const changeAddresses = hdwallet.listChangeAddresses(5, "p2wpkh", 0)
-console.log("Change Addresses:", changeAddresses)
+// From xpub (watch-only, addresses only)
+const { wallet } = HDWallet.import("xpub6CUGRUonZSQ4…")
 ```
 
 ---
 
-## Saving Derived Addresses
+## Deriving addresses
 
-> **Important**: You must save and manage the derived **receiving** and **change** addresses, including their derivation paths, indexes, and usage state. This is not handled internally by the library and is essential to avoid address reuse or missing funds.
+```ts
+// First 5 receive addresses (BIP84 → tb1… / bc1…)
+const receiveAddresses = wallet.listReceiveAddresses(5)
+
+// First 3 change addresses
+const changeAddresses = wallet.listChangeAddresses(3)
+
+// Account 1 receive addresses
+const account1 = wallet.listReceiveAddresses(5, 1)
+
+// Single address by index
+const addr0 = wallet.getAddress(0)
+```
+
+> **You are responsible for tracking which addresses and indexes you have used.**
+> The library does not persist state or connect to any blockchain node.
 
 ---
 
-## Signing Transactions
+## Building transactions
 
-To build and sign a transaction using derived keys:
+### InputTransaction fields
 
 ```ts
-const pairKey = hdwallet.getPairKey(0) // Derive the key to spend from
+interface InputTransaction {
+    txid: string        // Transaction ID of the UTXO being spent (64 hex chars)
+    vout: number        // Output index within that transaction
+    value: number       // UTXO value in satoshis
+    scriptPubKey?: string  // Hex-encoded scriptPubKey (auto-derived from key if omitted)
+    sequence?: string   // Sequence number in hex (default: "fffffffd" — RBF enabled)
+}
+```
 
-const tx = new HDTransaction({
-  fee: 20, // sat/vByte
-  whoPayTheFee: "everyone"
-})
+### OutputTransaction fields
 
-// Add UTXOs as inputs
+```ts
+interface OutputTransaction {
+    address: string  // Recipient Bitcoin address (P2PKH or P2WPKH)
+    amount: number   // Amount in satoshis
+}
+```
+
+---
+
+### Single-key transaction
+
+Use `Transaction` when all UTXOs belong to the same key pair.
+
+```ts
+import { ECPairKey, Transaction } from 'bitcoin-tx-lib'
+
+const pairKey = ECPairKey.fromWif("cNk5Vf4VwDPSUFqn4JzwGJHpNMm5mWnHSTRFDWJZm7jdHrr5Uef")
+
+const tx = new Transaction(pairKey)
+
 tx.addInput({
-  txid: "faketxid...",
-  vout: 0,
-  amount: 100000,
-  address: pairKey.getAddress("p2wpkh"),
-  scriptPubKey: "0014abcd...", // from UTXO
-  type: "p2wpkh"
-}, pairKey)
+    txid: "157da15b3cdb2561602bd889d578227aa089915e3945c6d26569d27aecb9a4f7",
+    vout: 0,
+    value: 50000
+    // scriptPubKey is optional — auto-generated from pairKey
+})
 
-// Add outputs
 tx.addOutput({
-  address: "bc1qrecipient...",
-  amount: 95000
+    address: "tb1qrecipient...",
+    amount: 49000  // value minus fee
 })
 
 tx.sign()
+
+console.log(tx.getRawHex())  // broadcast this
+console.log(tx.getTxid())
 ```
 
 ---
 
-## Getting Transaction Info
+### Multi-key HD transaction
 
-After signing, you can access transaction details:
-
-```ts
-const rawHex = tx.getRawHex()
-const rawBytes = tx.getRawBytes()
-const txid = tx.getTxid()
-
-console.log("TXID:", txid)
-```
-
----
-
-## Fee Calculation
-
-The library will compute the transaction weight and fee dynamically:
+Use `HDTransaction` when inputs are controlled by different derived keys.
 
 ```ts
-const weight = tx.weight()
-const vbytes = tx.vBytes()
-const fee = tx.getFeeSats()
+import { HDWallet, HDTransaction } from 'bitcoin-tx-lib'
 
-console.log("Virtual Size:", vbytes, "bytes")
-console.log("Fee:", fee, "satoshis")
-```
+const { wallet } = HDWallet.import("your mnemonic here")
 
-You can also use:
+const tx = new HDTransaction()
 
-```ts
-tx.resolveFee()
-```
+tx.addInput({
+    txid: "a1b2c3d4…",
+    vout: 0,
+    value: 30000,
+    scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9"
+}, wallet.getPairKey(0))   // key at derivation index 0
 
-This will automatically deduct the calculated fee from the outputs based on the strategy (e.g., from everyone or a specific address).
+tx.addInput({
+    txid: "e5f6a7b8…",
+    vout: 1,
+    value: 20000
+}, wallet.getPairKey(3))   // key at derivation index 3
 
----
-
-## Watch-Only Mode
-
-You can import a wallet using an **xpub** and derive addresses without holding private keys:
-
-```ts
-const { hdwallet } = HDWallet.import("xpub6...", undefined, {
-  network: "mainnet"
+tx.addOutput({
+    address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
+    amount: 49500
 })
 
-const watchOnly = hdwallet.isWatchOnly // true
-const address = hdwallet.getAddress(0, "p2wpkh")
+tx.sign()
+
+console.log(tx.getRawHex())
+console.log(tx.getTxid())
 ```
 
-Watch-only wallets can generate addresses, but **cannot sign transactions**.
+---
+
+### Spending multiple UTXOs from the same parent tx
+
+Bitcoin allows spending multiple outputs from the same transaction.
+The library distinguishes inputs by `txid + vout`, so the same `txid` with different `vout` values is valid:
+
+```ts
+tx.addInput({ txid: "abc123…", vout: 0, value: 15000 }, wallet.getPairKey(0))
+tx.addInput({ txid: "abc123…", vout: 1, value: 20000 }, wallet.getPairKey(1))  // same txid, different vout — OK
+```
 
 ---
 
-## API Reference
+## Fee management
 
-### `HDWallet.create(password?, options?)`
+### Manual fee (subtract from output amount yourself)
 
-Generates a new wallet and returns `{ mnemonic, hdwallet }`.
+```ts
+const tx = new Transaction(pairKey)
+tx.addInput({ txid: "…", vout: 0, value: 50000 })
+tx.addOutput({ address: "tb1q…", amount: 49800 })  // 200 sats fee = 50000 - 49800
+tx.sign()
+```
 
----
+### Automatic fee (resolveFee)
 
-### `HDWallet.import(input, password?, options?)`
+Pass `fee` (sat/vbyte) and `whoPayTheFee` when creating the transaction.
+Call `resolveFee()` to deduct the calculated fee, then `sign()` to rebuild.
 
-Imports from mnemonic, xpriv, or xpub.
+```ts
+const tx = new Transaction(pairKey, {
+    fee: 2,            // 2 sat/vbyte
+    whoPayTheFee: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf"
+})
 
----
+tx.addInput({ txid: "…", vout: 0, value: 50000 })
+tx.addOutput({ address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf", amount: 25000 })
+tx.addOutput({ address: "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj", amount: 25000 })
 
-### `hdwallet.listReceiveAddresses(count, type, account?)`
+tx.resolveFee()  // subtracts fee from the first output
+tx.sign()        // rebuild with fee-adjusted amounts
 
-Returns receiving addresses from `m/44'/0'/account'/0/i`.
+console.log(tx.getFeeSats())  // fee in satoshis
+console.log(tx.getRawHex())
+```
 
----
+**Fee strategies for `whoPayTheFee`:**
 
-### `hdwallet.listChangeAddresses(count, type, account?)`
+| Value | Behaviour |
+|-------|-----------|
+| `"address"` | Full fee deducted from the output matching that address |
+| `"everyone"` | Fee split evenly among all outputs |
+| *(single output)* | Fee deducted from the only output regardless of `whoPayTheFee` |
 
-Returns change addresses from `m/44'/0'/account'/1/i`.
-
----
-
-### `hdwallet.getPairKey(index, pathOptions?)`
-
-Returns an `ECPairKey` instance with private/public key for signing.
-
----
-
-### `HDTransaction(options?)`
-
-Creates a new HD transaction instance with optional options:
-
-* `fee`: Fee per virtual byte
-* `whoPayTheFee`: `"everyone"` or a specific address
-
----
-
-### `tx.addInput(input: InputTransaction)`
-
-### `tx.addOutput(output: OutputTransaction)`
-
-### `tx.sign()`
-
-### `tx.getTxid()`
-
-### `tx.getRawHex()`
-
-### `tx.getRawBytes()`
-
-### `tx.weight()`
-
-### `tx.vBytes()`
-
-### `tx.resolveFee()`
-
-### `tx.getFeeSats()`
-
-Use these methods to build, sign, and inspect the transaction.
+> `resolveFee()` is **idempotent** — calling it more than once has no additional effect.
 
 ---
 
-## Notes
+## Inspecting a signed transaction
 
-* You must persist the wallet’s mnemonic and derived addresses.
-* Index tracking is not handled automatically.
-* This library is non-custodial and does not connect to any blockchain node. You must manage UTXO discovery and broadcasting externally.
+```ts
+tx.sign()
+
+// Raw bytes
+const rawHex:   string     = tx.getRawHex()
+const rawBytes: Uint8Array = tx.getRawBytes()
+
+// Transaction ID (double SHA-256 of non-witness serialization — BIP 141 compliant)
+const txid: string = tx.getTxid()
+
+// Size metrics
+const weight: number = tx.weight()   // BIP 141 weight units
+const vbytes: number = tx.vBytes()   // virtual bytes — ceil(weight / 4)
+
+// Fee
+const feeSats: number = tx.getFeeSats()  // satoshis
+```
 
 ---
 
-## License
+## Watch-only wallets
 
-MIT
+A watch-only wallet derived from an xpub can generate addresses for monitoring
+incoming transactions, but cannot sign.
+
+```ts
+const { wallet } = HDWallet.import("xpub6CUGRUonZSQ4…")
+
+console.log(wallet.isWatchOnly)             // true
+const addrs = wallet.listReceiveAddresses(10)  // generate monitoring addresses
+wallet.getPairKey(0)                        // throws — no private key
+```
 
 ---
 
-Let me know if you'd like this exported to a `.md` file or expanded with code examples.
+## Replace-By-Fee (RBF)
+
+By default, every input has `sequence = 0xfffffffd` which signals RBF (BIP 125).
+This allows you to replace a stuck low-fee transaction with a higher-fee version.
+
+To disable RBF for a specific input, set its sequence to `"ffffffff"`:
+
+```ts
+tx.addInput({
+    txid: "…",
+    vout: 0,
+    value: 10000,
+    sequence: "ffffffff"   // RBF disabled for this input
+})
+```
+
+---
+
+## Key types reference
+
+### ECPairKey
+
+```ts
+const key = new ECPairKey()                          // random mainnet
+const key = new ECPairKey({ network: "testnet" })
+const key = ECPairKey.fromWif("cNk5…")
+const key = ECPairKey.fromHex("0c28fca386c7a227…", "mainnet")
+
+key.getAddress("p2wpkh")  // bech32 (bc1… / tb1…)
+key.getAddress("p2pkh")   // legacy (1… / m… / n…)
+key.getPublicKey()        // Uint8Array — compressed (33 bytes)
+key.getPrivateKey()       // Uint8Array — 32 bytes
+key.getPublicKeyHex()     // hex string
+key.getPrivateKeyHex()    // hex string
+key.getWif()              // Wallet Import Format (compressed, standard)
+key.signDER(hash)         // DER-encoded ECDSA signature
+key.verifySignature(hash, sig)
+```
+
+### TXOptions
+
+```ts
+interface TXOptions {
+    version?: number       // default: 2
+    locktime?: number      // default: 0
+    fee?: number           // sat/vbyte
+    whoPayTheFee?: string  // address or "everyone"
+}
+```
+
+---
+
+## Important notes
+
+- **UTXO discovery** — the library does not scan the blockchain. You must provide the UTXOs externally (via a block explorer API, Electrum, or a full node).
+- **Address tracking** — you are responsible for tracking which address indexes you have used and whether they have received funds.
+- **Broadcasting** — sign the transaction with `getRawHex()` and broadcast via any Bitcoin node or third-party API (e.g., Blockstream Esplora, Mempool.space).
+- **Supported address types** — P2PKH (legacy) and P2WPKH (native SegWit). P2SH and P2WSH are not supported for spending.
+- **Network safety** — always test on testnet before mainnet. Use `network: "testnet"` in all options.

@@ -54,8 +54,7 @@ export class HDKManager {
     public static fromMasterSeed(masterSeed: Uint8Array, options?: HDKParams) : HDKManager
     {
         const rootKey = HDKey.fromMasterSeed(masterSeed, this.getVersion(options))
-
-        return new HDKManager({ rootKey }) 
+        return new HDKManager({ ...options, rootKey })
     }
 
     /**
@@ -67,7 +66,7 @@ export class HDKManager {
     {
         const masterSeed = mnemonicToSeedSync(mnemonic, passphrase)
         const rootKey = HDKey.fromMasterSeed(masterSeed, this.getVersion(options))
-        return new HDKManager({ rootKey })
+        return new HDKManager({ ...options, rootKey })
     }
 
     /**

@@ -1,172 +1,240 @@
 # bitcoin-tx-lib
 
-A TypeScript library for building Bitcoin transactions, focused on compatibility 
-across any TypeScript environment, with minimal dependencies and built in pure
-TypeScript. Fully compatible with React, React Native, and any TypeScript projects, 
-with no reliance on native modules.
+A TypeScript library for building and signing Bitcoin transactions (P2PKH and P2WPKH),
+focused on compatibility across any TypeScript environment, with minimal dependencies
+and built in pure TypeScript. Fully compatible with React, React Native, and any
+TypeScript project, with no reliance on native modules.
 
 ## Index
 
 - [Manage Pair Key](#manage-pair-key)
-  - [How to create and import key pair from different sources](#how-to-create-and-import-key-pair-from-different-sources)
+  - [How to create and import key pairs from different sources](#how-to-create-and-import-key-pairs-from-different-sources)
   - [How to extract key pair information](#how-to-extract-key-pair-information)
 - [How to set up a transaction](#how-to-set-up-a-transaction)
-  - [Transaction](#transaction)
+  - [Transaction (single key)](#transaction-single-key)
+  - [HDTransaction (per-input key)](#hdtransaction-per-input-key)
   - [Network fee](#network-fee)
 - [How to use Hierarchical Deterministic Keys](hdkmanager.md)
 - [How to use HD Wallet functions](hdwallet.md)
 - [Building an HD Bitcoin Wallet with `bitcoin-tx-lib`](wallet.md)
 
-## Install 
+## Install
 
 ```bash
-    npm install bitcoin-tx-lib
+npm install bitcoin-tx-lib
 ```
 
 ## Manage Pair Key
 
-#### How to create and import key pair from different sources
+### How to create and import key pairs from different sources
 
 ```typescript
-    import { ECPairKey } from 'bitcoin-tx-lib'
+import { ECPairKey } from 'bitcoin-tx-lib'
 
-    // Generate pairkey mainnet
-    const pairKey = new ECPairKey() // default network mainnet
+// Generate a random key pair (mainnet)
+const pairKey = new ECPairKey()
 
-    // Generate pairkey testnet
-    const pairKey = new ECPairKey({ network: "testnet" })
+// Generate a random key pair (testnet)
+const pairKey = new ECPairKey({ network: "testnet" })
 
-    // Generate pairkey from private key hexadecimal
-    const pairKey = new ECPairKey({ privateKey: "0c28fca386c7a227600b2fe50b7cae11ec86d3bf1fbe471be89827e19d72aa1d", network: "testnet" })
+// Import from raw private key (hex)
+const pairKey = ECPairKey.fromHex(
+    "0c28fca386c7a227600b2fe50b7cae11ec86d3bf1fbe471be89827e19d72aa1d",
+    "testnet"
+)
 
-    // Get pairkey from WIF private key
-    const pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ") // default network mainnet
+// Import from WIF (Wallet Import Format)
+// Both compressed (52-char) and uncompressed (51-char) WIFs are supported
+const pairKey = ECPairKey.fromWif("cNk5Vf4VwDPSUFqn4JzwGJHpNMm5mWnHSTRFDWJZm7jdHrr5Uef")
 ```
 
-#### How to extract key pair information
+### How to extract key pair information
 
 ```typescript
-    const pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ")
+const pairKey = ECPairKey.fromWif("cNk5Vf4VwDPSUFqn4JzwGJHpNMm5mWnHSTRFDWJZm7jdHrr5Uef")
 
-    // private key hexadecimal Uint8Array 
-    // use the `Hex` suffix to get a hexadecimal string example getPrivateKeyHex()
-    const privateKey: string = pairKey.getPrivateKey()
+// Get private key as Uint8Array (use getPrivateKeyHex() for hex string)
+const privateKey: Uint8Array = pairKey.getPrivateKey()
 
-    // get hexadecimal public key Uint8Array 
-    // use the `Hex` suffix to get a hexadecimal string example getPublicKeyHex()
-    const publicKey: string = pairKey.getPublicKey()
+// Get compressed public key as Uint8Array (use getPublicKeyHex() for hex string)
+const publicKey: Uint8Array = pairKey.getPublicKey()
 
-    // get address 
-    const address = pairKey.getAddress("p2wpkh")
-    const address = pairKey.getAddress("p2pkh")
+// Get address (P2WPKH native SegWit by default)
+const addressSegwit = pairKey.getAddress()          // "p2wpkh" is the default
+const addressLegacy = pairKey.getAddress("p2pkh")
+
+// Export WIF (compressed format, compatible with standard wallets)
+const wif = pairKey.getWif()
 ```
 
-# How to set up a transaction
+## How to set up a transaction
 
-### Transaction 
+Supported script types: **P2PKH** (legacy) and **P2WPKH** (native SegWit).
+The library automatically detects the type from the `scriptPubKey` of each input.
 
-Currently, only P2PKH and P2WPKH transaction types are accepted.
-The Transaction class recognizes and processes them automatically.
+### Transaction (single key)
+
+Use `Transaction` when all inputs are controlled by the same key pair.
 
 ```typescript
-    import { ECPairKey, Transaction } from 'bitcoin-tx-lib'
+import { ECPairKey, Transaction } from 'bitcoin-tx-lib'
 
-    var pairKey = ECPairKey.fromWif("5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ")
+const pairKey = ECPairKey.fromWif("cNk5Vf4VwDPSUFqn4JzwGJHpNMm5mWnHSTRFDWJZm7jdHrr5Uef")
 
-    var transaction = new Transaction(pairKey)
+const tx = new Transaction(pairKey)
 
-    transaction.version = 2 // This line is optional, this is the default value
-    transaction.locktime = 0 // This line is optional, this is the default value
+tx.addInput({
+    txid: "157da15b3cdb2561602bd889d578227aa089915e3945c6d26569d27aecb9a4f7",
+    vout: 1,
+    value: 15197,
+    // scriptPubKey is optional — auto-derived from the key pair if omitted
+    scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9"
+})
 
-    transaction.addInput({
-        txid: "157da15b3cdb2561602bd889d578227aa089915e3945c6d26569d27aecb9a4f7",
-        scriptPubKey: "0014a8439c50793b033df810de257b313144a8f7edc9", // optional
-        value: 15197, 
-        vout: 1
-    })
+tx.addOutput({
+    address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
+    amount: 14197  // value minus fee
+})
 
-    transaction.addOutput({
-        address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
-        amount: 15197 - 2000 /// fee 1000 sats  
-    })
+tx.sign()
 
-    // If the value has change.
-    transaction.addOutput({
-        address: pairKey.getAddress("p2wpkh"), // Your address to receive your change
-        value: 1000 // Amount in sats
-    })
-
-    var transactionRow = transaction.getRawHex() // return transaction raw in string hexadecimal signed
-    /*
-        transactionRow: 02000000000101c6be2d35cce2b9def60ea1d1923bc6566fc2c8d30fb3d76a843
-        92343855ead6f0100000000ffffffff01d00c000000000000160014aec042df56d9dc2fad0b30faf6
-        2eb94f07cba3cc02483045022100bd4f1ff33aadc704173d31246e45a77cafee0a9534ab1383ce95c
-        e163870783402203fc6d5321dfbdacac0874d1acf48e7a03087daf7690225216491660584e6e8c401
-        210333b81ed541c4beee28783890c013f1e5dd4eb38f60b78a4d30b5cad26996217f00000000
-    */
-
-   var txid = transaction.getTxid() // Calculate transaction id
-   /*
-        txid: 7c850c5f558d3ea982f2b1a940f4ec40104841793029302fbcb8958595066eaf
-   */
+const rawHex = tx.getRawHex()  // hex-encoded signed transaction
+const txid   = tx.getTxid()    // correct txid (non-witness hash for SegWit, BIP 141)
 ```
-> Now if `scriptPubkey` is not passed as a parameter it will be automatically generated 
-from the key pair
+
+> **Note:** Multiple UTXOs from the same parent transaction (same txid, different vout)
+> are fully supported. Only spending the exact same UTXO (txid + vout) twice is rejected.
+
+### HDTransaction (per-input key)
+
+Use `HDTransaction` when inputs are signed by different HD-derived key pairs.
+
+```typescript
+import { HDTransaction, HDWallet } from 'bitcoin-tx-lib'
+
+const { wallet } = HDWallet.create()  // or HDWallet.import(mnemonic)
+
+const tx = new HDTransaction()
+
+tx.addInput({
+    txid: "157da15b3cdb2561602bd889d578227aa089915e3945c6d26569d27aecb9a4f7",
+    vout: 0,
+    value: 10000
+}, wallet.getPairKey(0))  // key for this specific input
+
+tx.addInput({
+    txid: "157da15b3cdb2561602bd889d578227aa089915e3945c6d26569d27aecb9a4f7",
+    vout: 1,
+    value: 20000
+}, wallet.getPairKey(1))  // different key for this input
+
+tx.addOutput({
+    address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
+    amount: 29500
+})
+
+tx.sign()
+
+const rawHex = tx.getRawHex()
+const txid   = tx.getTxid()
+```
 
 ### Network fee
 
-To automatically handle the network fee, simply define who will pay the fee when
-instantiating the `Transaction`, distribute the total of the inputs among the outputs, and
-call the `resolveFee()` method:
+Pass `whoPayTheFee` and `fee` (sat/vbyte) when creating the transaction.
+Call `resolveFee()` to deduct the fee from the designated output(s),
+then call `sign()` to rebuild the transaction with the updated amounts.
+
+**`resolveFee()` is idempotent** — calling it multiple times has no additional effect.
 
 ```typescript
-    var transaction = new Transaction(pairKey, {
-        whoPayTheFee: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
-        fee: 1, // estimated rate of 1 sat/vb
-    })
-    
-    transaction.addInput({
-        txid: "16945364992874171da102f987c217f3ff13bb4817957f6a030169083a8ac8f0",
-        value: 30000, // total input value 
-        vout: 1
-    })
-    // distributes the total of the inputs to the outputs, the fee will be automatically removed
-    // from the specific output defined when calling resolveFee():
-    transaction.addOutput({
-        address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
-        amount: 15000 
-    })
-    transaction.addOutput({
-        address: "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj",
-        amount: 15000 
-    })
-    // Decrements the output fee for "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf" as defined 
-    // in the whoPayTheFee property of Transaction
-    transaction.resolveFee() 
+const tx = new Transaction(pairKey, {
+    whoPayTheFee: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf",
+    fee: 2,  // 2 sat/vbyte
+})
 
-    const row = transaction.getRawHex()
+tx.addInput({ txid: "...", vout: 1, value: 30000 })
+tx.addOutput({ address: "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf", amount: 15000 })
+tx.addOutput({ address: "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj", amount: 15000 })
+
+tx.resolveFee()  // deducts fee from the first address only
+tx.sign()        // rebuild with fee-adjusted amounts
+
+const raw = tx.getRawHex()
 ```
->   Now, the execution of resolveFee() is unecessary, it will be executed automatically if you have passed the 
-`whoPayTheFee` and `fee` parameters. now just run getRawHex().
 
-You can set `whoPayTheFee` to `"everyone"`, so when `resolveFee()` is executed, the fee will
-be evenly distributed among all transaction outputs. For example, if the fee is 240 satoshis 
-and the transaction has 2 outputs, each output will pay 120 satoshis.
+Set `whoPayTheFee` to `"everyone"` to split the fee evenly among all outputs:
 
 ```typescript
-    var transaction = new Transaction(pairKey, {
-        whoPayTheFee: "everyone",
-        fee: 1, // estimated rate of 1 sat/vb
-    })
-    
-    //....
-    transaction.resolveFee()
-
+const tx = new Transaction(pairKey, {
+    whoPayTheFee: "everyone",
+    fee: 2,
+})
+// ...
+tx.resolveFee()
+tx.sign()
 ```
 
-`**Note**`: By default, the transaction is created with Replace-By-Fee enabled to 
-prevent it from getting stuck in the mempool due to very low fees. This allows you 
-to rebuild the same transaction with a higher fee and send it again, overwriting 
-the previous one. To disable Replace-By-Fee, simply set the 
-sequence to 0xffffffff in the input.
+Use `getFeeSats()` to inspect the fee without deducting it:
 
+```typescript
+tx.sign()
+const fee = tx.getFeeSats()  // total fee in satoshis
+```
+
+#### Transaction size helpers
+
+```typescript
+tx.sign()
+
+const weight = tx.weight()   // BIP 141 weight units
+const vbytes = tx.vBytes()   // virtual bytes (ceil(weight / 4))
+```
+
+> **Replace-By-Fee (RBF):** By default every input uses `sequence = 0xfffffffd`,
+> enabling RBF (BIP 125). To disable RBF for an input, set `sequence: "ffffffff"`.
+
+## Changelog
+
+### 0.5.0
+
+- **Fix:** `HDTransaction.sign()` now correctly uses the stripped (non-witness)
+  serialization for txid computation, satisfying BIP 141. Previously,
+  SegWit txids were computed over the witness-inclusive bytes.
+- **Fix:** `HDKManager.fromMnemonic()` and `fromMasterSeed()` now forward
+  `purpose`, `coinType`, `account`, and `change` options to the constructor.
+  Previously, `purpose: 44` was silently ignored, causing BIP84 paths to be
+  used instead of BIP44.
+- **Fix:** `ECPairKey.getWif()` now appends the `0x01` compressed-key flag byte
+  before the checksum, producing standard compressed WIF (52-char). Previously,
+  exported WIFs were interpreted by external wallets as uncompressed keys,
+  deriving incorrect addresses.
+- **Fix:** `generateScriptSig()` now uses each input's own `sequence` value in
+  the signing preimage. Previously, all inputs in the preimage inherited the
+  sequence of the input being signed, producing invalid signatures for
+  multi-input legacy transactions.
+- **Fix:** `resolveFee()` is now idempotent (calling twice no longer double-deducts
+  the fee) and invalidates the cached raw transaction after adjusting output amounts,
+  so `getRawHex()` always returns the fee-adjusted transaction.
+- **Fix:** `validateInput()` now checks `txid + vout` for duplicates instead of
+  `txid` alone, allowing multiple UTXOs from the same parent transaction and
+  correctly rejecting only double-spends of the exact same output.
+- **Fix:** `HDTransactionBase.build()` now encodes the legacy scriptSig length
+  as a proper Bitcoin varint instead of a fixed 1-byte value, fixing malformed
+  transactions when scriptSig exceeds 252 bytes.
+- **Fix:** `scriptPubkeyToScriptCode()` now correctly identifies P2WSH scripts
+  (`OP_0 <32-byte-hash>`, prefix `0x00 0x20`) enabling witness generation for
+  P2WSH inputs. The previous check used opcode `0x79` (OP_SWAP) which never
+  matched any real script.
+- **Fix:** `ECPairKey.signDER()` no longer loops until exactly 70 bytes. All
+  valid DER signatures (70–72 bytes) are now accepted, eliminating an unnecessary
+  restriction and potential long loops for certain key/message combinations.
+- **Fix:** `hexToBytes()` loop bound corrected from `<=` to `<`, eliminating a
+  silent out-of-bounds write on typed arrays.
+- **Fix:** `OP_PUSHBYTES_20` and `OP_PUSHBYTES_32` corrected to `0x14` (20) and
+  `0x20` (32) respectively.
+- **Improvement:** `weight()` now derives witness size from the cached
+  serialized transaction (txraw vs txidraw diff) instead of re-signing all
+  inputs on each call, making it consistent and eliminating redundant signing.
+- **Test:** Added idempotency tests for `resolveFee()`.
+- **Test:** Added test covering multiple inputs from the same parent transaction.

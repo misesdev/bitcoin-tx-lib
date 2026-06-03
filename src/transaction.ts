@@ -5,12 +5,14 @@ import { TXOptions } from "./types";
 
 export class Transaction extends BaseTransaction {
 
+    private feeResolved: boolean = false
+
     /**
      * Creates a new Transaction instance.
      * @param pairkey The key pair used to sign the transaction inputs.
      * @param options Optional transaction parameters (version, locktime, fee, etc.).
      */
-    constructor(pairkey: ECPairKey, options?: TXOptions) 
+    constructor(pairkey: ECPairKey, options?: TXOptions)
     {
         super(pairkey, options)
     }
@@ -47,34 +49,27 @@ export class Transaction extends BaseTransaction {
 
     /**
      * Calculates the total weight of the transaction according to BIP 141.
-     * Weight = (non-witness bytes * 4) + witness bytes.
-     * 
+     * Weight = (non-witness bytes * 4) + witness bytes + marker/flag bytes.
+     * Uses cached serialization to avoid re-signing on each call.
+     *
      * @throws Error if the transaction is not signed.
      * @returns The transaction weight.
      */
-    public weight() : number 
+    public weight() : number
     {
         // docs https://learnmeabitcoin.com/technical/transaction/size/
         if(!this.cachedata.get("txraw")) this.sign()
-	    // witness marker and flag * 1
-        let witnessMK = 0 // 2 bytes of marker and flag 0x00+0x01 = 2 bytes * 1
-       
-        if(this.isSegwit()) witnessMK = 2
 
-        let hexTransaction = this.cachedata.get("txraw") as Uint8Array
-        
-        let witnessInputs = this.inputs.filter(this.isSegwitInput)
-	    // witness size * 1
-        let witnessSize = witnessInputs.reduce((sum, input) => {
-            let witness = this.buildWitness(input)
-            return sum + witness.length
-        }, 0) 
-        // discount the size of the witness fields and multiply by 4
-        let transactionSize = hexTransaction.length
-        transactionSize = (transactionSize - (witnessSize + witnessMK)) * 4 
-        transactionSize += (witnessSize + witnessMK) // * 1
-        
-        return Math.ceil(transactionSize)
+        const txraw = this.cachedata.get("txraw") as Uint8Array
+        const txidraw = this.cachedata.get("txidraw") as Uint8Array
+
+        if(!this.isSegwit()) return txraw.length * 4
+
+        // txraw includes: non-witness bytes + 2 marker/flag bytes + witness bytes
+        // txidraw includes: non-witness bytes only (stripped serialization for txid)
+        const witnessMK = 2
+        const witnessSize = txraw.length - txidraw.length - witnessMK
+        return txidraw.length * 4 + witnessSize + witnessMK
     }
 
     /**
@@ -95,28 +90,38 @@ export class Transaction extends BaseTransaction {
      * If only one output exists, deduct the entire fee from it.
      * If `whoPayTheFee` is "everyone", split the fee evenly among all outputs.
      * If `whoPayTheFee` is an address, deduct the fee from the output matching that address.
-     * 
+     * Idempotent: calling more than once has no additional effect.
+     *
      * @throws Error if the transaction is not signed.
      */
     public resolveFee() : void
     {
+        if(this.feeResolved) return
+
         if(!this.cachedata.get("txraw")) this.sign()
-        
-        let satoshis = Math.ceil(this.vBytes() * (this.fee??1))
+
+        const satoshisPerOutput = Math.ceil(this.vBytes() * (this.fee??1))
 
         if(this.outputs.length == 1) {
-            this.outputs[0].amount -= satoshis
+            this.outputs[0].amount -= satoshisPerOutput
+            this.feeResolved = true
+            this.cachedata.clear()
             return
         }
-        
+
         if(this.whoPayTheFee === "everyone") {
-            satoshis = Math.ceil(this.vBytes() * (this.fee??1) / this.outputs.length)
-            this.outputs.forEach(out => out.amount -= satoshis)
+            const share = Math.ceil(this.vBytes() * (this.fee??1) / this.outputs.length)
+            this.outputs.forEach(out => out.amount -= share)
+            this.feeResolved = true
+            this.cachedata.clear()
+            return
         }
 
         for(let i = 0; i < this.outputs.length; i++) {
-            if(this.outputs[i].address == this.whoPayTheFee) {
-                this.outputs[i].amount -= satoshis
+            if(this.outputs[i].address === this.whoPayTheFee) {
+                this.outputs[i].amount -= satoshisPerOutput
+                this.feeResolved = true
+                this.cachedata.clear()
                 break
             }
         }
@@ -148,14 +153,23 @@ export class Transaction extends BaseTransaction {
 
     /**
      * Returns the raw transaction bytes as a Uint8Array.
-     * 
+     *
      * @throws Error if the transaction is not signed.
      * @returns The raw transaction bytes.
      */
-    public getRawBytes() : Uint8Array 
+    public getRawBytes() : Uint8Array
     {
         if(!this.cachedata.get("txraw")) this.sign()
         return this.cachedata.get("txraw") as Uint8Array
+    }
+
+    /**
+     * Clears all inputs, outputs, cache data and resets the fee state.
+     */
+    public override clear() : void
+    {
+        super.clear()
+        this.feeResolved = false
     }
 }
 

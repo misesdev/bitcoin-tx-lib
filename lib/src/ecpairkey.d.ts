@@ -25,7 +25,8 @@ export declare class ECPairKey {
     verifySignature(message: Uint8Array, signature: Uint8Array): boolean;
     /**
     * Returns the WIF (Wallet Import Format) of the private key.
-    * @param compressed Whether to append 0x01 to indicate compressed public key.
+    * The 0x01 suffix indicates the key produces a compressed public key,
+    * which is required for compatibility with standard Bitcoin wallets.
     */
     getWif(): string;
     /**

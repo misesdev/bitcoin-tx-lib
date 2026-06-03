@@ -106,14 +106,14 @@ export abstract class TransactionBuilder
         inputs.forEach(txin => {
             hexTransaction.append(hexToBytes(txin.txid).reverse()) // txid
             hexTransaction.append(numberToHexLE(txin.vout, 32)) // index output (vout)
-            if(txin.txid === input.txid) {
+            if(txin.txid === input.txid && txin.vout === input.vout) {
                 let script = hexToBytes(txin.scriptPubKey as string)
                 hexTransaction.append(numberToVarint(script.length))
                 hexTransaction.append(script)
             } else
                 hexTransaction.append(new Uint8Array([0])) // length 0x00 to sign
             // 0xfffffffd Replace By Fee (RBF) enabled BIP 125
-            hexTransaction.append(hexToBytes(input.sequence??"fffffffd").reverse()) 
+            hexTransaction.append(hexToBytes(txin.sequence??"fffffffd").reverse())
         })
 
         hexTransaction.append(numberToVarint(outputs.length)) // number of outputs
@@ -228,8 +228,8 @@ export abstract class TransactionBuilder
             throw new Error("Expected a valid txid with 32 bytes")
         else if(input.scriptPubKey && input.scriptPubKey.length % 2 != 0)
             throw new Error("scriptPubKey is in invalid format, expected a hexadecimal string") 
-        if(inputs.some(i => i.txid == input.txid))
-            throw new Error("An input with this txid has already been added")
+        if(inputs.some(i => i.txid === input.txid && i.vout === input.vout))
+            throw new Error("An input with this utxo (txid:vout) has already been added")
     }
 
     /**

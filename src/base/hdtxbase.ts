@@ -121,7 +121,7 @@ export abstract class HDTransactionBase extends TransactionBuilder
                 hexTransaction.append(new Uint8Array([0])) // script sig in witness area // P2WPKH 
             } else {
                 let scriptSig = this.buildScriptSig(input)
-                hexTransaction.append(numberToHexLE(scriptSig.length, 8))
+                hexTransaction.append(numberToVarint(scriptSig.length))
                 hexTransaction.append(scriptSig)
                 witnessData.append(new Uint8Array([0])) // no witness, only scriptSig
             }
