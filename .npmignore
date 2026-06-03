@@ -1,0 +1,15 @@
+# TypeScript source at root — consumers use the compiled lib/
+/src/
+/index.ts
+/jest.config.ts
+/tsconfig.json
+
+# Compiled test files — not needed by consumers
+lib/src/**/*.test.js
+lib/src/**/*.test.js.map
+lib/src/**/*.test.d.ts
+
+# Compiled Jest config — not needed by consumers
+lib/jest.config.js
+lib/jest.config.js.map
+lib/jest.config.d.ts
