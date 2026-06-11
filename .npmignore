@@ -4,12 +4,15 @@
 /jest.config.ts
 /tsconfig.json
 
+# Source maps — not needed by consumers and flagged as obfuscated by security scanners
+**/*.js.map
+**/*.d.ts.map
+
 # Compiled test files — not needed by consumers
 lib/src/**/*.test.js
-lib/src/**/*.test.js.map
 lib/src/**/*.test.d.ts
 
 # Compiled Jest config — not needed by consumers
 lib/jest.config.js
-lib/jest.config.js.map
 lib/jest.config.d.ts
+
