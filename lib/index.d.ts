@@ -397,10 +397,18 @@ declare class HDKManager {
      */
     getXPriv(): string;
     /**
-     * Returns the extended public key serialized with the correct version bytes.
+     * Returns the root extended public key. For sharing with watch-only wallets, use
+     * getAccountXPub() instead — this returns the master root key, not the account-level key.
      * Mainnet BIP44 → xpub, Testnet BIP44 → tpub, Mainnet BIP84 → zpub, Testnet BIP84 → vpub.
      */
     getXPub(): string;
+    /**
+     * Returns the BIP44/84 account-level extended public key for sharing with watch-only wallets.
+     * Derives to m/purpose'/coinType'/account' and returns that subtree's public key.
+     * This is what Electrum, Sparrow, hardware wallets, and other wallets export as zpub/xpub.
+     * Throws if called on a watch-only instance (hardened derivation requires the private key).
+     */
+    getAccountXPub(account?: number): string;
     /**
      * Resolves the correct HD key version bytes for the given purpose and network.
      */
@@ -659,8 +667,15 @@ declare class HDWallet {
     getPairKey(index: number, pathOptions?: PathOptions): ECPairKey;
     /** Returns the extended private key (xprv). */
     getXPriv(): string;
-    /** Returns the extended public key (xpub). */
+    /** Returns the root extended public key. For watch-only sharing, use getAccountXPub() instead. */
     getXPub(): string;
+    /**
+     * Returns the account-level extended public key (zpub/xpub/tpub/vpub) suitable for
+     * import into watch-only wallets. This is the key at m/purpose'/coinType'/account'
+     * and matches what Electrum, Sparrow, Ledger, and Trezor export.
+     * Throws for watch-only wallets (hardened derivation requires the private key).
+     */
+    getAccountXPub(account?: number): string;
     getWif(): string;
 }
 
