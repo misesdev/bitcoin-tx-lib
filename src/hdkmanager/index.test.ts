@@ -6,10 +6,19 @@ import { HDKey } from "@scure/bip32"
 const MNEMONIC = "pistol lesson rigid season script crouch clog spin lottery canal deal leaf"
 const PASSPHRASE = "test-password"
 
-// fromXPriv/fromXPub require standard BIP44 version bytes (0x0488ade4/0x0488b21e).
-// @scure/bip32 only recognises those in fromExtendedKey — BIP84 versions (04b2430c/04b24746)
-// are custom and cause "Version mismatch". Always use purpose:44 when testing fromXPriv/fromXPub.
+// Deterministic extended key fixtures derived from MNEMONIC
+// All four purpose+network combinations are now fully supported via custom version bytes.
+const TPRV = "tprv8ZgxMBicQKsPd9e3prXjam86kr9rKKxKdLkpnGxg1Qg2KwHQxKWaJ8AbdKvurqdgLMr5AeKMiwkpwJ4JHmEdecQX6pLiVwahKgBta1MXCox"
+const TPUB = "tpubD6NzVbkrYhZ4WcfqiWCKzAnDKsfnUf9ECeMc4nzyRgURARYBaiLAUcnToWEzCsCRkXS94Apys9Jw7Jrf27Lss4gY4VWCx2axuwikwT8qXER"
+const ZPRV = "zprvAWgYBBk7JR8Givnkq1FUqHh7nf2Xy3uK81t9UeKzHSwJeYAnUGVx2W7RkZgRrHZCnCYufVtiUut8F1jgbwiiS2W8JrXG1QVcx2ZkuWWKYi7"
+const ZPUB = "zpub6jftahH18ngZwQsDw2nVCRdrLgs2NWdAVEokH2jbqnUHXLVw1opCaJRubt5NgBZ2mu8qwYWEFNBzBhbB4eKfa6bSja9kSKZhsSFdxdPuX68"
+const VPRV = "vprv9DMUxX4ShgxMKk2HVa6yzwK76nSkCZwKTZoGM4kSmRRnS8usTdqhYFUsfjr5rewX9e5gfbWUeGTvhsHRjA4fF5miqVjZfmDfs8KBM9YRnrQ"
+const VPUB = "vpub5SLqN2bLY4WeYE6kbbdzN5FqepHEc2fApnis9TA4KkxmJwF21B9x63oMX4F2gYwM9Lfcwe7zQimneZ8vBrfcP9s3GDN46gHknY14QGkZKDZ"
+
 const bip44Hdk = () => HDKManager.fromMnemonic(MNEMONIC, undefined, { purpose: 44 } as any)
+const bip44TestnetHdk = () => HDKManager.fromMnemonic(MNEMONIC, undefined, { purpose: 44, network: "testnet" } as any)
+const bip84MainnetHdk = () => HDKManager.fromMnemonic(MNEMONIC, undefined, { purpose: 84, network: "mainnet" } as any)
+const bip84TestnetHdk = () => HDKManager.fromMnemonic(MNEMONIC, undefined, { purpose: 84, network: "testnet" } as any)
 
 describe("HDKManager", () => {
 
@@ -302,6 +311,219 @@ describe("HDKManager", () => {
             hdk["_rootKey"].derive = () => ({ privateKey: undefined } as any)
             expect(() => hdk.derivatePrivateKey(0)).toThrow()
             hdk["_rootKey"].derive = orig
+        })
+    })
+
+    // ── NETWORK-AWARE EXTENDED KEY EXPORT ─────────────────────────────────────
+    describe("network-aware extended key export", () => {
+        test("BIP44 mainnet → getXPriv returns xprv-prefixed key", () => {
+            expect(bip44Hdk().getXPriv()).toMatch(/^xprv/)
+        })
+
+        test("BIP44 mainnet → getXPub returns xpub-prefixed key", () => {
+            expect(bip44Hdk().getXPub()).toMatch(/^xpub/)
+        })
+
+        test("BIP44 testnet → getXPriv returns tprv-prefixed key", () => {
+            expect(bip44TestnetHdk().getXPriv()).toMatch(/^tprv/)
+        })
+
+        test("BIP44 testnet → getXPub returns tpub-prefixed key", () => {
+            expect(bip44TestnetHdk().getXPub()).toMatch(/^tpub/)
+        })
+
+        test("BIP84 mainnet → getXPriv returns zprv-prefixed key", () => {
+            expect(bip84MainnetHdk().getXPriv()).toMatch(/^zprv/)
+        })
+
+        test("BIP84 mainnet → getXPub returns zpub-prefixed key", () => {
+            expect(bip84MainnetHdk().getXPub()).toMatch(/^zpub/)
+        })
+
+        test("BIP84 testnet → getXPriv returns vprv-prefixed key", () => {
+            expect(bip84TestnetHdk().getXPriv()).toMatch(/^vprv/)
+        })
+
+        test("BIP84 testnet → getXPub returns vpub-prefixed key", () => {
+            expect(bip84TestnetHdk().getXPub()).toMatch(/^vpub/)
+        })
+
+        test("network field is stored correctly on construction", () => {
+            expect(bip44Hdk().network).toBe("mainnet")
+            expect(bip44TestnetHdk().network).toBe("testnet")
+            expect(bip84MainnetHdk().network).toBe("mainnet")
+            expect(bip84TestnetHdk().network).toBe("testnet")
+        })
+    })
+
+    // ── EXTENDED KEY IMPORT — ALL FORMATS ─────────────────────────────────────
+    describe("fromXPriv — all supported formats", () => {
+        test("imports tprv (BIP44 testnet) successfully", () => {
+            const hdk = HDKManager.fromXPriv(TPRV)
+            expect(hdk.hasPrivateKey()).toBe(true)
+            expect(hdk.purpose).toBe(44)
+            expect(hdk.network).toBe("testnet")
+        })
+
+        test("imports zprv (BIP84 mainnet) successfully", () => {
+            const hdk = HDKManager.fromXPriv(ZPRV)
+            expect(hdk.hasPrivateKey()).toBe(true)
+            expect(hdk.purpose).toBe(84)
+            expect(hdk.network).toBe("mainnet")
+        })
+
+        test("imports vprv (BIP84 testnet) successfully", () => {
+            const hdk = HDKManager.fromXPriv(VPRV)
+            expect(hdk.hasPrivateKey()).toBe(true)
+            expect(hdk.purpose).toBe(84)
+            expect(hdk.network).toBe("testnet")
+        })
+
+        test("tprv round-trip: reimport produces same master public key", () => {
+            const original = bip44TestnetHdk()
+            const restored = HDKManager.fromXPriv(original.getXPriv())
+            expect(restored.getMasterPublicKey()).toEqual(original.getMasterPublicKey())
+        })
+
+        test("zprv round-trip: reimport produces same master public key", () => {
+            const original = bip84MainnetHdk()
+            const restored = HDKManager.fromXPriv(original.getXPriv())
+            expect(restored.getMasterPublicKey()).toEqual(original.getMasterPublicKey())
+        })
+
+        test("vprv round-trip: reimport produces same master public key", () => {
+            const original = bip84TestnetHdk()
+            const restored = HDKManager.fromXPriv(original.getXPriv())
+            expect(restored.getMasterPublicKey()).toEqual(original.getMasterPublicKey())
+        })
+
+        test("throws for unrecognized key prefix", () => {
+            expect(() => HDKManager.fromXPriv("abcd1234")).toThrow('Unrecognized extended key prefix: "abcd"')
+        })
+    })
+
+    describe("fromXPub — all supported formats", () => {
+        test("imports tpub (BIP44 testnet) as watch-only", () => {
+            const hdk = HDKManager.fromXPub(TPUB)
+            expect(hdk.hasPrivateKey()).toBe(false)
+            expect(hdk.purpose).toBe(44)
+            expect(hdk.network).toBe("testnet")
+        })
+
+        test("imports zpub (BIP84 mainnet) as watch-only", () => {
+            const hdk = HDKManager.fromXPub(ZPUB)
+            expect(hdk.hasPrivateKey()).toBe(false)
+            expect(hdk.purpose).toBe(84)
+            expect(hdk.network).toBe("mainnet")
+        })
+
+        test("imports vpub (BIP84 testnet) as watch-only", () => {
+            const hdk = HDKManager.fromXPub(VPUB)
+            expect(hdk.hasPrivateKey()).toBe(false)
+            expect(hdk.purpose).toBe(84)
+            expect(hdk.network).toBe("testnet")
+        })
+
+        test("tpub round-trip: same master public key as original", () => {
+            const original = bip44TestnetHdk()
+            const watchOnly = HDKManager.fromXPub(original.getXPub())
+            expect(watchOnly.getMasterPublicKey()).toEqual(original.getMasterPublicKey())
+        })
+
+        test("zpub round-trip: same master public key as original", () => {
+            const original = bip84MainnetHdk()
+            const watchOnly = HDKManager.fromXPub(original.getXPub())
+            expect(watchOnly.getMasterPublicKey()).toEqual(original.getMasterPublicKey())
+        })
+
+        test("vpub round-trip: same master public key as original", () => {
+            const original = bip84TestnetHdk()
+            const watchOnly = HDKManager.fromXPub(original.getXPub())
+            expect(watchOnly.getMasterPublicKey()).toEqual(original.getMasterPublicKey())
+        })
+
+        test("tpub master public key matches tprv master public key", () => {
+            // Root xpub and xpriv share the same public key at root level.
+            // Derived keys differ because watch-only uses relative path m/0/N
+            // while full wallet uses hardened path m/44'/0'/0'/0/N.
+            const full = HDKManager.fromXPriv(TPRV)
+            const watchOnly = HDKManager.fromXPub(TPUB)
+            expect(watchOnly.getMasterPublicKey()).toEqual(full.getMasterPublicKey())
+        })
+
+        test("zpub master public key matches zprv master public key", () => {
+            const full = HDKManager.fromXPriv(ZPRV)
+            const watchOnly = HDKManager.fromXPub(ZPUB)
+            expect(watchOnly.getMasterPublicKey()).toEqual(full.getMasterPublicKey())
+        })
+
+        test("throws for unrecognized key prefix", () => {
+            expect(() => HDKManager.fromXPub("aaaa1234")).toThrow('Unrecognized extended key prefix: "aaaa"')
+        })
+    })
+
+    // ── PURPOSE + NETWORK INFERENCE ON IMPORT ─────────────────────────────────
+    describe("purpose and network inference from extended key prefix", () => {
+        test("xprv → purpose 44, network mainnet", () => {
+            const hdk = HDKManager.fromXPriv(bip44Hdk().getXPriv())
+            expect(hdk.purpose).toBe(44)
+            expect(hdk.network).toBe("mainnet")
+        })
+
+        test("tprv → purpose 44, network testnet", () => {
+            const hdk = HDKManager.fromXPriv(TPRV)
+            expect(hdk.purpose).toBe(44)
+            expect(hdk.network).toBe("testnet")
+        })
+
+        test("zprv → purpose 84, network mainnet", () => {
+            const hdk = HDKManager.fromXPriv(ZPRV)
+            expect(hdk.purpose).toBe(84)
+            expect(hdk.network).toBe("mainnet")
+        })
+
+        test("vprv → purpose 84, network testnet", () => {
+            const hdk = HDKManager.fromXPriv(VPRV)
+            expect(hdk.purpose).toBe(84)
+            expect(hdk.network).toBe("testnet")
+        })
+
+        test("pathParams can override inferred purpose and network", () => {
+            const hdk = HDKManager.fromXPriv(TPRV, { purpose: 84, network: "mainnet" } as any)
+            expect(hdk.purpose).toBe(84)
+            expect(hdk.network).toBe("mainnet")
+        })
+    })
+
+    // ── NETWORK-AWARE PAIR KEY DERIVATION ─────────────────────────────────────
+    describe("network-aware pair key derivation", () => {
+        test("fromMnemonic testnet → derivatePairKey uses testnet by default", () => {
+            const hdk = bip84TestnetHdk()
+            const pair = hdk.derivatePairKey(0)
+            expect(pair.network).toBe("testnet")
+            expect(pair.getAddress("p2wpkh")).toMatch(/^tb1/)
+        })
+
+        test("fromMnemonic mainnet → derivatePairKey uses mainnet by default", () => {
+            const hdk = bip84MainnetHdk()
+            const pair = hdk.derivatePairKey(0)
+            expect(pair.network).toBe("mainnet")
+            expect(pair.getAddress("p2wpkh")).toMatch(/^bc1/)
+        })
+
+        test("network override in derivatePairKey takes precedence over HDKManager.network", () => {
+            const hdk = bip84MainnetHdk()
+            const pair = hdk.derivatePairKey(0, { network: "testnet" })
+            expect(pair.network).toBe("testnet")
+        })
+
+        test("derivateMultiplePairKeys inherits HDKManager network", () => {
+            const hdk = bip84TestnetHdk()
+            const pairs = hdk.derivateMultiplePairKeys(3)
+            pairs.forEach(p => {
+                expect(p.network).toBe("testnet")
+                expect(p.getAddress("p2wpkh")).toMatch(/^tb1/)
+            })
         })
     })
 })

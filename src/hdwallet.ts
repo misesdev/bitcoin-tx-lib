@@ -28,11 +28,11 @@ export class HDWallet
     public readonly isWatchOnly: boolean;
     private readonly _hdkManager: HDKManager;
 
-    constructor(hdkManager: HDKManager, options?: HDWalletOptions) 
+    constructor(hdkManager: HDKManager, options?: HDWalletOptions)
     {
         this._hdkManager = hdkManager
         this.isWatchOnly = !hdkManager.hasPrivateKey()
-        this.network = options?.network ?? "mainnet"
+        this.network = options?.network ?? hdkManager.network
     }
 
     /**
@@ -45,7 +45,8 @@ export class HDWallet
     {
         const mnemonic = MnemonicUtils.generateMnemonic(128)
         const hdkeyManager = HDKManager.fromMnemonic(mnemonic, passphrase, {
-            purpose: options?.purpose ?? 84
+            purpose: options?.purpose ?? 84,
+            network: options?.network,
         } as HDKParams)
         const wallet = new HDWallet(hdkeyManager, options)
         return { mnemonic, wallet }
@@ -67,17 +68,20 @@ export class HDWallet
             if(!MnemonicUtils.validateMnemonic(trimmed))
                 throw new Error("Invalid seed phrase (mnemonic)")
 
-            const hdkParams = options?.purpose ? { purpose: options.purpose } as HDKParams : undefined
+            const hdkParams = {
+                purpose: options?.purpose,
+                network: options?.network,
+            } as HDKParams
             const wallet = new HDWallet(HDKManager.fromMnemonic(trimmed, password, hdkParams), options)
             return { mnemonic: trimmed, wallet }
         }
 
-        if (/^(xprv|tprv)[a-zA-Z0-9]+$/.test(trimmed)) {
+        if (/^(xprv|tprv|zprv|vprv)[1-9A-HJ-NP-Za-km-z]+$/.test(trimmed)) {
             const wallet = new HDWallet(HDKManager.fromXPriv(trimmed), options)
             return { wallet }
         }
 
-        if (/^(xpub|tpub)[a-zA-Z0-9]+$/.test(trimmed)) {
+        if (/^(xpub|tpub|zpub|vpub)[1-9A-HJ-NP-Za-km-z]+$/.test(trimmed)) {
             const wallet = new HDWallet(HDKManager.fromXPub(trimmed), options)
             return { wallet }
         }
@@ -116,7 +120,8 @@ export class HDWallet
             return this._hdkManager.deriveMultiplePublicKeys(quantity, pathOptions)
                 .map(pubkey => Address.fromPubkey({
                     pubkey: bytesToHex(pubkey),
-                    type: getTypeAddreee() 
+                    type: getTypeAddreee(),
+                    network: this.network
                 }))
         }
 

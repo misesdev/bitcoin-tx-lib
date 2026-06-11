@@ -196,6 +196,37 @@ const vbytes = tx.vBytes()   // virtual bytes (ceil(weight / 4))
 
 ## Changelog
 
+### 0.6.0
+
+- **Fix:** `HDWallet.listAddresses()` in watch-only mode now passes the wallet's `network`
+  to `Address.fromPubkey()`. Previously, watch-only wallets always generated mainnet
+  addresses regardless of the configured network.
+- **Fix:** `HDWallet.import()` and `HDWallet.create()` now propagate `network` to
+  `HDKManager.fromMnemonic()`. Previously, `network: "testnet"` in options was silently
+  ignored, causing `getXPriv()`/`getXPub()` to always return mainnet-prefixed keys (`xprv`/`xpub`)
+  even for testnet wallets.
+- **Feature:** `HDKManager.fromXPriv()` and `fromXPub()` now support all four extended
+  key formats: `xprv`/`xpub` (BIP44 mainnet), `tprv`/`tpub` (BIP44 testnet),
+  `zprv`/`zpub` (BIP84 mainnet), `vprv`/`vpub` (BIP84 testnet). Previously, only
+  `xprv`/`xpub` were accepted; other formats caused a "Version mismatch" error from
+  the underlying BIP32 library.
+- **Feature:** `HDKManager.fromXPriv()` and `fromXPub()` now automatically infer
+  `purpose` (44 or 84) and `network` (mainnet or testnet) from the key prefix.
+  These inferred values can be overridden via `pathParams`.
+- **Feature:** `HDWallet.import()` now accepts `zprv`/`zpub` and `vprv`/`vpub` in
+  addition to `xprv`/`tprv` and `xpub`/`tpub`. Network and purpose are inferred from
+  the key prefix automatically.
+- **Feature:** `HDKManager` now stores a `network` property. When creating from mnemonic
+  or seed with `network: "testnet"`, derived pair keys inherit testnet by default without
+  requiring an explicit network argument on each `derivatePairKey()` call.
+- **Feature:** `getXPriv()`/`getXPub()` now return the correct prefix for the configured
+  network and purpose. For example, a BIP84 testnet wallet exports `vprv`/`vpub` instead
+  of always returning `zprv`/`zpub`.
+- **Fix:** Flaky test in `txbuilder.test.ts` ("legacy transaction: raw equals txid build")
+  corrected to allow ±1 byte variation caused by non-deterministic DER signature length
+  (`extraEntropy: true`). The test was re-signing the transaction on each `build()` call,
+  producing occasional mismatches.
+
 ### 0.5.0
 
 - **Fix:** `HDTransaction.sign()` now correctly uses the stripped (non-witness)
