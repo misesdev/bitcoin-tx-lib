@@ -1,5 +1,5 @@
 import { HDKey } from "@scure/bip32";
-import { bytesToHex } from "../utils";
+import { bytesToHex, hexToBytes } from "../utils";
 import { mnemonicToSeedSync } from "@scure/bip39"
 import { ECPairKey } from "../ecpairkey";
 import { BNetwork } from "../types";
@@ -190,8 +190,9 @@ export class HDKManager {
             throw new Error("Invalid derivation index");
 
         const privateKey = bytesToHex(this.derivatePrivateKey(index, pathOptions))
+        const type = this.purpose === 84 ? "p2wpkh" : "p2pkh"
 
-        return ECPairKey.fromHex(privateKey, options?.network ?? this.network)
+        return new ECPairKey({ privateKey: hexToBytes(privateKey), network: options?.network ?? this.network, type })
     }
 
     /**

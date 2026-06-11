@@ -1,6 +1,7 @@
 import { BNetwork, ECOptions, TypeAddress } from "./types";
 export declare class ECPairKey {
     readonly network: BNetwork;
+    readonly type: TypeAddress;
     readonly privateKey: Uint8Array;
     static wifPrefixes: {
         mainnet: number;

@@ -15,7 +15,8 @@ export interface Bech32Options {
 
 export interface ECOptions {
     network?: BNetwork,
-    privateKey?: Uint8Array 
+    privateKey?: Uint8Array,
+    type?: TypeAddress
 }
 
 export interface InputTransaction {

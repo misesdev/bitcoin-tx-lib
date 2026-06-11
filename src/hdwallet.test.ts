@@ -480,4 +480,49 @@ describe("HDWallet", () => {
             watchOnly.listAddresses(3).forEach(addr => expect(addr).toMatch(/^tb1/))
         })
     })
+
+    describe("getAddress / getPairKey consistency (BIP44 vs BIP84)", () => {
+        test("BIP84 wallet: getAddress(0) and getPairKey(0).getAddress() both return bech32", () => {
+            const { wallet } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 84 })
+            const addrDirect = wallet.getAddress(0)
+            const addrViaPair = wallet.getPairKey(0).getAddress()
+            expect(addrDirect).toMatch(/^bc1/)
+            expect(addrViaPair).toMatch(/^bc1/)
+            expect(addrDirect).toBe(addrViaPair)
+        })
+
+        test("BIP44 wallet: getAddress(0) and getPairKey(0).getAddress() both return P2PKH", () => {
+            const { wallet } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 44 })
+            const addrDirect = wallet.getAddress(0)
+            const addrViaPair = wallet.getPairKey(0).getAddress()
+            expect(addrDirect).toMatch(/^1/)
+            expect(addrViaPair).toMatch(/^1/)
+            expect(addrDirect).toBe(addrViaPair)
+        })
+
+        test("BIP44 testnet: getAddress(0) and getPairKey(0).getAddress() both return P2PKH testnet", () => {
+            const { wallet } = HDWallet.import(MNEMONIC_A, "", { network: "testnet", purpose: 44 })
+            const addrDirect = wallet.getAddress(0)
+            const addrViaPair = wallet.getPairKey(0).getAddress()
+            expect(addrDirect).toMatch(/^[mn]/)
+            expect(addrViaPair).toMatch(/^[mn]/)
+            expect(addrDirect).toBe(addrViaPair)
+        })
+
+        test("BIP84 testnet: getAddress(0) and getPairKey(0).getAddress() both return tb1", () => {
+            const { wallet } = HDWallet.import(MNEMONIC_A, "", { network: "testnet", purpose: 84 })
+            const addrDirect = wallet.getAddress(0)
+            const addrViaPair = wallet.getPairKey(0).getAddress()
+            expect(addrDirect).toMatch(/^tb1/)
+            expect(addrViaPair).toMatch(/^tb1/)
+            expect(addrDirect).toBe(addrViaPair)
+        })
+
+        test("getPairKey type property reflects wallet purpose", () => {
+            const { wallet: bip44 } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 44 })
+            const { wallet: bip84 } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 84 })
+            expect(bip44.getPairKey(0).type).toBe("p2pkh")
+            expect(bip84.getPairKey(0).type).toBe("p2wpkh")
+        })
+    })
 })

@@ -1,6 +1,6 @@
 import { OP_CODES } from "../constants/opcodes"
-import { ripemd160 as ripemd160Noble } from "@noble/hashes/legacy.js"
-import { sha256 as sha256Noble } from "@noble/hashes/sha2.js"
+import { ripemd160 as ripemd160Noble } from "@noble/hashes/legacy"
+import { sha256 as sha256Noble } from "@noble/hashes/sha2"
 import { Hex } from "../types"
 
 export function bytesToHex(bytes: Uint8Array): string {

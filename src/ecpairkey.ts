@@ -7,13 +7,15 @@ import { base58 } from "@scure/base";
 export class ECPairKey {
 
     public readonly network: BNetwork
+    public readonly type: TypeAddress
     public readonly privateKey: Uint8Array
     // the byte 0x80 is prefix for mainnet and 0xef is prefix for testnet
     static wifPrefixes = { mainnet: 0x80, testnet: 0xef }
 
     constructor(options?: ECOptions) {
         this.network = options?.network ?? "mainnet"
-        this.privateKey = options?.privateKey ?? secp256k1.utils.randomPrivateKey() 
+        this.type = options?.type ?? "p2wpkh"
+        this.privateKey = options?.privateKey ?? secp256k1.utils.randomPrivateKey()
     }
 
     /**
@@ -70,7 +72,7 @@ export class ECPairKey {
    * Returns the address associated with the compressed public key.
    * @param type Type of address to generate (p2pkh, p2wpkh, etc).
    */
-    public getAddress(type: TypeAddress = "p2wpkh"): string 
+    public getAddress(type: TypeAddress = this.type): string
     {
         let pubkey = bytesToHex(this.getPublicKey())
         return Address.fromPubkey({ pubkey, type, network: this.network })
