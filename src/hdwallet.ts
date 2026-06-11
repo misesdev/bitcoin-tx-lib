@@ -221,10 +221,23 @@ export class HDWallet
         return this._hdkManager.getXPriv()
     }
 
-    /** Returns the extended public key (xpub). */
-    public getXPub() : string 
+    /** Returns the root extended public key. For watch-only sharing, use getAccountXPub() instead. */
+    public getXPub() : string
     {
         return this._hdkManager.getXPub()
+    }
+
+    /**
+     * Returns the account-level extended public key (zpub/xpub/tpub/vpub) suitable for
+     * import into watch-only wallets. This is the key at m/purpose'/coinType'/account'
+     * and matches what Electrum, Sparrow, Ledger, and Trezor export.
+     * Throws for watch-only wallets (hardened derivation requires the private key).
+     */
+    public getAccountXPub(account?: number) : string
+    {
+        if (this.isWatchOnly)
+            throw new Error("The wallet only has the public key, it is read-only")
+        return this._hdkManager.getAccountXPub(account)
     }
     
     public getWif() : string

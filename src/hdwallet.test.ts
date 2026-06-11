@@ -429,10 +429,6 @@ describe("HDWallet", () => {
     })
 
     // ── ROUND-TRIP: MNEMONIC → EXTENDED KEY → REIMPORT ───────────────────────
-    // Note: watch-only (xpub) round-trips cannot compare addresses with full wallets
-    // because the exported xpub is the ROOT key. Watch-only derivation uses a relative
-    // path (m/0/N) while full wallets use hardened paths (m/purpose'/coin'/acct'/0/N).
-    // For address equality, an account-level xpub would be required.
     describe("round-trip: mnemonic → export extended key → reimport", () => {
         test("testnet BIP44: mnemonic → tprv → reimport as full wallet → same addresses", () => {
             const { wallet: original } = HDWallet.import(MNEMONIC_A, "", { network: "testnet", purpose: 44 })
@@ -462,22 +458,93 @@ describe("HDWallet", () => {
             expect(restored.getAddress(0)).toBe(original.getAddress(0))
         })
 
-        test("mainnet BIP84: mnemonic → zpub (root) → watch-only derives bc1 addresses", () => {
+        // getXPub() returns the ROOT key (depth 0). Watch-only from root derives m/0/N which
+        // does NOT match the full wallet's m/84'/0'/0'/0/N. Use getAccountXPub() for watch-only sharing.
+        test("mainnet BIP84: mnemonic → zpub (root) → watch-only derives bc1 addresses (different from full wallet)", () => {
             const { wallet: full } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 84 })
             const zpub = full.getXPub()
             const { wallet: watchOnly } = HDWallet.import(zpub)
             expect(watchOnly.isWatchOnly).toBe(true)
             expect(watchOnly.network).toBe("mainnet")
             watchOnly.listAddresses(3).forEach(addr => expect(addr).toMatch(/^bc1/))
+            // Root-level zpub produces different addresses than the full wallet
+            expect(watchOnly.getAddress(0)).not.toBe(full.getAddress(0))
+        })
+    })
+
+    // ── getAccountXPub: BIP84-COMPLIANT WATCH-ONLY ROUND-TRIP ────────────────
+    describe("getAccountXPub() — BIP84-compliant watch-only round-trip", () => {
+        test("mainnet BIP84: account zpub produces SAME addresses as full wallet", () => {
+            const { wallet: full } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 84 })
+            const accountZpub = full.getAccountXPub()
+            const { wallet: watchOnly } = HDWallet.import(accountZpub)
+            expect(watchOnly.isWatchOnly).toBe(true)
+            expect(watchOnly.network).toBe("mainnet")
+            expect(watchOnly.getAddress(0)).toBe(full.getAddress(0))
+            expect(watchOnly.getAddress(1)).toBe(full.getAddress(1))
+            expect(watchOnly.getAddress(9)).toBe(full.getAddress(9))
         })
 
-        test("testnet BIP84: mnemonic → vpub (root) → watch-only derives tb1 addresses", () => {
+        test("testnet BIP84: account vpub produces SAME addresses as full wallet", () => {
             const { wallet: full } = HDWallet.import(MNEMONIC_A, "", { network: "testnet", purpose: 84 })
-            const vpub = full.getXPub()
-            const { wallet: watchOnly } = HDWallet.import(vpub)
+            const accountVpub = full.getAccountXPub()
+            const { wallet: watchOnly } = HDWallet.import(accountVpub)
             expect(watchOnly.isWatchOnly).toBe(true)
             expect(watchOnly.network).toBe("testnet")
-            watchOnly.listAddresses(3).forEach(addr => expect(addr).toMatch(/^tb1/))
+            expect(watchOnly.getAddress(0)).toBe(full.getAddress(0))
+            expect(watchOnly.getAddress(5)).toBe(full.getAddress(5))
+        })
+
+        test("mainnet BIP44: account xpub produces SAME addresses as full wallet", () => {
+            const { wallet: full } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 44 })
+            const accountXpub = full.getAccountXPub()
+            const { wallet: watchOnly } = HDWallet.import(accountXpub)
+            expect(watchOnly.isWatchOnly).toBe(true)
+            expect(watchOnly.network).toBe("mainnet")
+            expect(watchOnly.getAddress(0)).toBe(full.getAddress(0))
+            expect(watchOnly.getAddress(4)).toBe(full.getAddress(4))
+        })
+
+        test("account xpub correctly separates receive (change=0) and change (change=1) chains", () => {
+            const { wallet: full } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 84 })
+            const { wallet: watchOnly } = HDWallet.import(full.getAccountXPub())
+            const receiveFromFull = full.listReceiveAddresses(3)
+            const changeFromFull = full.listChangeAddresses(3)
+            const receiveFromWatch = watchOnly.listReceiveAddresses(3)
+            const changeFromWatch = watchOnly.listChangeAddresses(3)
+            expect(receiveFromWatch).toEqual(receiveFromFull)
+            expect(changeFromWatch).toEqual(changeFromFull)
+        })
+
+        test("getAccountXPub returns zpub-prefixed key for mainnet BIP84", () => {
+            const { wallet } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 84 })
+            expect(wallet.getAccountXPub()).toMatch(/^zpub/)
+        })
+
+        test("getAccountXPub returns vpub-prefixed key for testnet BIP84", () => {
+            const { wallet } = HDWallet.import(MNEMONIC_A, "", { network: "testnet", purpose: 84 })
+            expect(wallet.getAccountXPub()).toMatch(/^vpub/)
+        })
+
+        test("getAccountXPub returns xpub-prefixed key for mainnet BIP44", () => {
+            const { wallet } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 44 })
+            expect(wallet.getAccountXPub()).toMatch(/^xpub/)
+        })
+
+        test("getAccountXPub differs from getXPub (root)", () => {
+            const { wallet } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 84 })
+            expect(wallet.getAccountXPub()).not.toBe(wallet.getXPub())
+        })
+
+        test("getAccountXPub with account=1 produces different key than account=0", () => {
+            const { wallet } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 84 })
+            expect(wallet.getAccountXPub(0)).not.toBe(wallet.getAccountXPub(1))
+        })
+
+        test("getAccountXPub throws for watch-only wallet", () => {
+            const { wallet: full } = HDWallet.import(MNEMONIC_A, "", { network: "mainnet", purpose: 84 })
+            const { wallet: watchOnly } = HDWallet.import(full.getAccountXPub())
+            expect(() => watchOnly.getAccountXPub()).toThrow("read-only")
         })
     })
 

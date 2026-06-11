@@ -262,12 +262,34 @@ export class HDKManager {
     }
 
     /**
-     * Returns the extended public key serialized with the correct version bytes.
+     * Returns the root extended public key. For sharing with watch-only wallets, use
+     * getAccountXPub() instead — this returns the master root key, not the account-level key.
      * Mainnet BIP44 → xpub, Testnet BIP44 → tpub, Mainnet BIP84 → zpub, Testnet BIP84 → vpub.
      */
     public getXPub() : string
     {
         return this._rootKey.publicExtendedKey
+    }
+
+    /**
+     * Returns the BIP44/84 account-level extended public key for sharing with watch-only wallets.
+     * Derives to m/purpose'/coinType'/account' and returns that subtree's public key.
+     * This is what Electrum, Sparrow, hardware wallets, and other wallets export as zpub/xpub.
+     * Throws if called on a watch-only instance (hardened derivation requires the private key).
+     */
+    public getAccountXPub(account?: number) : string
+    {
+        if (!this.hasPrivateKey())
+            throw new Error("Cannot derive account-level xpub from a watch-only key — hardened derivation requires the private key")
+
+        const acct = account ?? this.account
+        const path = `m/${this.purpose}'/${this.coinType}'/${acct}'`
+        const accountKey = this._rootKey.derive(path)
+
+        if (!accountKey.publicKey)
+            throw new Error(`Failed to derive account key at path ${path}`)
+
+        return accountKey.publicExtendedKey
     }
 
     /**

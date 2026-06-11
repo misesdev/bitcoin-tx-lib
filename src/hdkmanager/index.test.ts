@@ -495,6 +495,52 @@ describe("HDKManager", () => {
         })
     })
 
+    // ── getAccountXPub: BIP84 ACCOUNT-LEVEL KEY EXPORT ────────────────────────
+    describe("getAccountXPub()", () => {
+        test("mainnet BIP84: returns zpub-prefixed key", () => {
+            expect(bip84MainnetHdk().getAccountXPub()).toMatch(/^zpub/)
+        })
+
+        test("testnet BIP84: returns vpub-prefixed key", () => {
+            expect(bip84TestnetHdk().getAccountXPub()).toMatch(/^vpub/)
+        })
+
+        test("mainnet BIP44: returns xpub-prefixed key", () => {
+            expect(bip44Hdk().getAccountXPub()).toMatch(/^xpub/)
+        })
+
+        test("account xpub differs from root xpub (getXPub)", () => {
+            const hdk = bip84MainnetHdk()
+            expect(hdk.getAccountXPub()).not.toBe(hdk.getXPub())
+        })
+
+        test("watch-only: getAccountXPub throws (hardened derivation not possible)", () => {
+            const watchOnly = HDKManager.fromXPub(bip84MainnetHdk().getAccountXPub())
+            expect(() => watchOnly.getAccountXPub()).toThrow("watch-only")
+        })
+
+        test("account=0 and account=1 produce different keys", () => {
+            const hdk = bip84MainnetHdk()
+            expect(hdk.getAccountXPub(0)).not.toBe(hdk.getAccountXPub(1))
+        })
+
+        test("watch-only from account xpub derives same public key as full wallet at index 0", () => {
+            const full = bip84MainnetHdk()
+            const accountZpub = full.getAccountXPub()
+            const watchOnly = HDKManager.fromXPub(accountZpub)
+            const pubFromFull = full.derivatePublicKey(0)
+            const pubFromWatch = watchOnly.derivatePublicKey(0)
+            expect(pubFromWatch).toEqual(pubFromFull)
+        })
+
+        test("watch-only from account xpub derives same public key at index 5 receive and change", () => {
+            const full = bip84MainnetHdk()
+            const watchOnly = HDKManager.fromXPub(full.getAccountXPub())
+            expect(watchOnly.derivatePublicKey(5, { change: 0 })).toEqual(full.derivatePublicKey(5, { change: 0 }))
+            expect(watchOnly.derivatePublicKey(5, { change: 1 })).toEqual(full.derivatePublicKey(5, { change: 1 }))
+        })
+    })
+
     // ── NETWORK-AWARE PAIR KEY DERIVATION ─────────────────────────────────────
     describe("network-aware pair key derivation", () => {
         test("fromMnemonic testnet → derivatePairKey uses testnet by default", () => {
