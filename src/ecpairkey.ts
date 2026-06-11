@@ -1,6 +1,6 @@
 import { BNetwork, ECOptions, TypeAddress } from "./types"
 import { bytesToHex, checksum, hexToBytes } from "./utils";
-import { secp256k1 } from "@noble/curves/secp256k1";
+import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { Address } from "./utils/address";
 import { base58 } from "@scure/base";
 
@@ -15,7 +15,7 @@ export class ECPairKey {
     constructor(options?: ECOptions) {
         this.network = options?.network ?? "mainnet"
         this.type = options?.type ?? "p2wpkh"
-        this.privateKey = options?.privateKey ?? secp256k1.utils.randomPrivateKey()
+        this.privateKey = options?.privateKey ?? secp256k1.utils.randomSecretKey()
     }
 
     /**
@@ -37,11 +37,11 @@ export class ECPairKey {
     */
     public signDER(message: Uint8Array) : Uint8Array
     {
-        const signature = secp256k1.sign(message, this.privateKey, {
+        return secp256k1.sign(message, this.privateKey, {
             extraEntropy: true,
-            lowS: true
+            lowS: true,
+            format: 'der',
         })
-        return signature.toDERRawBytes()
     }
     
     /**
@@ -51,7 +51,7 @@ export class ECPairKey {
     */
     public verifySignature(message: Uint8Array, signature: Uint8Array): boolean
     {
-        return secp256k1.verify(signature, message, this.getPublicKey())
+        return secp256k1.verify(signature, message, this.getPublicKey(), { format: 'der' })
     }
 
     /**
