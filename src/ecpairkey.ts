@@ -37,13 +37,17 @@ export class ECPairKey {
     */
     public signDER(message: Uint8Array) : Uint8Array
     {
+        // prehash:false — the message is already the final sighash (hash256 of the preimage).
+        // @noble/curves v2 defaults to prehash:true (applies SHA256 again), which would produce
+        // a signature over sha256(sighash) instead of sighash, rejected by Bitcoin nodes.
         return secp256k1.sign(message, this.privateKey, {
             extraEntropy: true,
             lowS: true,
             format: 'der',
+            prehash: false,
         })
     }
-    
+
     /**
     * Verifies a DER-encoded signature against a message hash.
     * @param message Message hash that was signed.
@@ -51,7 +55,8 @@ export class ECPairKey {
     */
     public verifySignature(message: Uint8Array, signature: Uint8Array): boolean
     {
-        return secp256k1.verify(signature, message, this.getPublicKey(), { format: 'der' })
+        // prehash:false — same reason as signDER, the message is already the final hash.
+        return secp256k1.verify(signature, message, this.getPublicKey(), { format: 'der', prehash: false })
     }
 
     /**

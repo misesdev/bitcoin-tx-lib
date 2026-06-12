@@ -1,6 +1,11 @@
 import { ECPairKey } from "./ecpairkey"
 import { Transaction } from "./transaction"
 import { InputTransaction, OutputTransaction } from "./types"
+import { hexToBytes, hash256, numberToHexLE, numberToVarint } from "./utils"
+import { ByteBuffer } from "./utils/buffer"
+import { scriptPubkeyToScriptCode } from "./utils/txutils"
+import { secp256k1 } from "@noble/curves/secp256k1.js"
+import { OP_CODES } from "./constants/opcodes"
 
 describe("transaction class", () => {
 
@@ -247,6 +252,114 @@ describe("transaction class", () => {
 
         transaction.resolveFee()
         expect(transaction.outputs[0].amount).toBe(amountAfterFirst)
+    })
+
+    // ── SIGNATURE VALIDITY — anti-regression for @noble/curves v2 prehash bug ─
+    // Before the fix, @noble/curves v2 default prehash:true caused the library to sign
+    // sha256(sighash) instead of sighash. Our internal verify() was consistent (also
+    // applied prehash) so tests passed, but every Bitcoin node rejected the transaction.
+    describe("signature validity — prehash:false regression", () => {
+
+        function bip143SigHash(
+            txid: string, vout: number, scriptPubKey: string,
+            value: number, sequence: string, outputAddr: string,
+            outputAmount: number, version: number, locktime: number
+        ): Uint8Array {
+            const prevout = new ByteBuffer(hexToBytes(txid).reverse())
+            prevout.append(numberToHexLE(vout, 32))
+            const hashPrevouts = hash256(prevout.raw())
+
+            const seqBytes = hexToBytes(sequence).reverse()
+            const hashSequence = hash256(seqBytes)
+
+            const scriptCode = scriptPubkeyToScriptCode(scriptPubKey)
+
+            // output serialisation for hashOutputs
+            const spkBytes = hexToBytes(scriptPubKey)
+            const outBuf = new ByteBuffer(numberToHexLE(outputAmount, 64))
+            outBuf.append(numberToVarint(spkBytes.length))
+            outBuf.append(spkBytes)
+            const hashOutputs = hash256(outBuf.raw())
+
+            const preimage = new ByteBuffer(numberToHexLE(version, 32))
+            preimage.append(hashPrevouts)
+            preimage.append(hashSequence)
+            preimage.append(hexToBytes(txid).reverse())
+            preimage.append(numberToHexLE(vout, 32))
+            preimage.append(scriptCode)
+            preimage.append(numberToHexLE(value, 64))
+            preimage.append(hexToBytes(sequence).reverse())
+            preimage.append(hashOutputs)
+            preimage.append(numberToHexLE(locktime, 32))
+            preimage.append(numberToHexLE(OP_CODES.SIGHASH_ALL, 32))
+
+            return hash256(preimage.raw())
+        }
+
+        test("P2WPKH: witness signature passes raw secp256k1 verify (prehash:false)", () => {
+            const privHex = "1111111111111111111111111111111111111111111111111111111111111111"
+            const pair = ECPairKey.fromHex(privHex, "mainnet")
+            const scriptPubKey = "0014fc7250a211deddc70ee5a2738de5f07817351cef"
+            const txid = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+            const tx = new Transaction(pair)
+            tx.addInput({ txid, vout: 0, value: 100000, scriptPubKey })
+            tx.addOutput({ address: pair.getAddress("p2wpkh"), amount: 90000 })
+            tx.sign()
+
+            // Extract witness signature from the raw transaction
+            const raw = tx.getRawBytes()
+            // Structure: version(4) + marker(1) + flag(1) + inputCount(1) + txid(32) + vout(4)
+            //            + scriptSigLen(1=0) + sequence(4) + outputCount(1) + amount(8) + spkLen(1)
+            //            + spk(22) + witnessItemCount(1) + sigLen(1) + sig...
+            const witnessOffset = 4 + 2 + 1 + 32 + 4 + 1 + 4 + 1 + 8 + 1 + 22
+            const sigLen = raw[witnessOffset + 1]  // witness item count=0x02, then sig length
+            const sigBytes = raw.slice(witnessOffset + 2, witnessOffset + 2 + sigLen)
+            // Remove the trailing SIGHASH_ALL byte for the raw DER sig
+            const derSig = sigBytes.slice(0, -1)
+
+            const expectedSigHash = bip143SigHash(
+                txid, 0, scriptPubKey, 100000, "fffffffd",
+                pair.getAddress("p2wpkh"), 90000, 2, 0
+            )
+
+            // This is exactly what Bitcoin Script does: verify DER sig against the raw sighash
+            const valid = secp256k1.verify(derSig, expectedSigHash, pair.getPublicKey(), {
+                format: 'der',
+                prehash: false
+            })
+            expect(valid).toBe(true)
+        })
+
+        test("P2WPKH: witness signature fails if verified with prehash:true (double-hash)", () => {
+            const privHex = "2222222222222222222222222222222222222222222222222222222222222222"
+            const pair = ECPairKey.fromHex(privHex, "mainnet")
+            const scriptPubKey = "00148d4498e5dbb2c6ef4f6ef37e95c4daec46c37e41"
+            const txid = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+            const tx = new Transaction(pair)
+            tx.addInput({ txid, vout: 1, value: 50000, scriptPubKey })
+            tx.addOutput({ address: pair.getAddress("p2wpkh"), amount: 45000 })
+            tx.sign()
+
+            const raw = tx.getRawBytes()
+            const witnessOffset = 4 + 2 + 1 + 32 + 4 + 1 + 4 + 1 + 8 + 1 + 22
+            const sigLen = raw[witnessOffset + 1]
+            const sigBytes = raw.slice(witnessOffset + 2, witnessOffset + 2 + sigLen)
+            const derSig = sigBytes.slice(0, -1)
+
+            const expectedSigHash = bip143SigHash(
+                txid, 1, scriptPubKey, 50000, "fffffffd",
+                pair.getAddress("p2wpkh"), 45000, 2, 0
+            )
+
+            // prehash:true would mean the library re-hashes — this must be FALSE (the old bug)
+            const wouldBeInvalid = secp256k1.verify(derSig, expectedSigHash, pair.getPublicKey(), {
+                format: 'der',
+                prehash: true
+            })
+            expect(wouldBeInvalid).toBe(false)
+        })
     })
 })
 

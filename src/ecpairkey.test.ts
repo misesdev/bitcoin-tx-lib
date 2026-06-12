@@ -1,6 +1,7 @@
 import { ECPairKey } from "./ecpairkey"
-import { hexToBytes, sha256 } from "./utils"
+import { hexToBytes, sha256, hash256 } from "./utils"
 import { base58 } from "@scure/base"
+import { secp256k1 } from "@noble/curves/secp256k1.js"
 
 describe("ECPairKey", () => {
     const sampleMessage = hexToBytes("6244980fa0752e5b4643")
@@ -179,6 +180,52 @@ describe("ECPairKey", () => {
                 const sig = key.signDER(messageHash)
                 expect(key.verifySignature(messageHash, sig)).toBe(true)
             }
+        })
+    })
+
+    // ── PREHASH REGRESSION — anti-regression for @noble/curves v2 ────────────
+    // @noble/curves v2 changed the default to prehash:true (applies SHA256 to the
+    // message before signing). Bitcoin sighashes are already hash256(preimage), so
+    // prehash:false MUST be set. Without it, the library signs sha256(sighash) instead
+    // of sighash, producing a signature that passes our internal verify() but is
+    // rejected by every Bitcoin node.
+    describe("prehash:false — signDER produces Bitcoin-valid signatures", () => {
+        // A realistic Bitcoin sighash (32 bytes, already double-SHA256)
+        const sighash = hexToBytes("c57776e82bb26ba28f5c6b3292f7c40af5dbcf11f2d2ba2ba8709cb93a85b392")
+
+        test("signDER over sighash passes raw prehash:false verify (what Bitcoin nodes do)", () => {
+            const key = new ECPairKey()
+            const sig = key.signDER(sighash)
+            const pubkey = key.getPublicKey()
+            // Verify without extra hashing — this is exactly what Bitcoin Script does
+            const isValid = secp256k1.verify(sig, sighash, pubkey, { format: 'der', prehash: false })
+            expect(isValid).toBe(true)
+        })
+
+        test("signDER over sighash does NOT pass prehash:true verify (would mean double-hashed)", () => {
+            const key = new ECPairKey()
+            const sig = key.signDER(sighash)
+            const pubkey = key.getPublicKey()
+            // If this were true, we'd be signing sha256(sighash) — wrong for Bitcoin
+            const wouldBeDouble = secp256k1.verify(sig, sighash, pubkey, { format: 'der', prehash: true })
+            expect(wouldBeDouble).toBe(false)
+        })
+
+        test("verifySignature is consistent with signDER on a Bitcoin sighash", () => {
+            const key = new ECPairKey()
+            const sig = key.signDER(sighash)
+            expect(key.verifySignature(sighash, sig)).toBe(true)
+        })
+
+        test("DER sig over hash256 is a different signature than over sha256(hash256)", () => {
+            const key = ECPairKey.fromHex("1111111111111111111111111111111111111111111111111111111111111111")
+            const sigCorrect = key.signDER(sighash)   // prehash:false — signs sighash directly
+            // What a prehash:true call would produce:
+            const sigWrong = secp256k1.sign(sighash, key.getPrivateKey(), { lowS: true, format: 'der', prehash: true })
+            // Deterministic key → same r/s only if same message; different prehash → different
+            const pubkey = key.getPublicKey()
+            expect(secp256k1.verify(sigCorrect, sighash, pubkey, { format: 'der', prehash: false })).toBe(true)
+            expect(secp256k1.verify(sigWrong,   sighash, pubkey, { format: 'der', prehash: false })).toBe(false)
         })
     })
 
