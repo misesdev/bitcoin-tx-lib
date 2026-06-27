@@ -244,6 +244,63 @@ describe("transaction class", () => {
         transaction.resolveFee()
         expect(transaction.outputs[0].amount).toBe(amountAfterFirst)
     })
+
+    describe("fee safety and consistency", () => {
+        const txid = "16945364992874171da102f987c217f3ff13bb4817957f6a030169083a8ac8f0"
+        const scriptPubKey = "0014a8439c50793b033df810de257b313144a8f7edc9"
+        const payer = "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf"
+        const receiver = "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj"
+
+        test("constructor rejects invalid fee rates", () => {
+            expect(() => new HDTransaction({ fee: 0 })).toThrow("Expected a valid fee rate")
+            expect(() => new HDTransaction({ fee: -1 })).toThrow("Expected a valid fee rate")
+            expect(() => new HDTransaction({ fee: Number.NaN })).toThrow("Expected a valid fee rate")
+        })
+
+        test("getFeeSats returns actual fee without resolving or mutating outputs", () => {
+            transaction = new HDTransaction({ whoPayTheFee: payer, fee: 2 })
+            transaction.addInput({ txid, scriptPubKey, value: 30000, vout: 1 }, wallet.getPairKey(0))
+            transaction.addOutput({ address: payer, amount: 15000 })
+            transaction.addOutput({ address: receiver, amount: 15000 })
+
+            expect(transaction.getFeeSats()).toBe(0)
+            expect(transaction.outputs.map(output => output.amount)).toEqual([15000, 15000])
+        })
+
+        test("resolveFee throws when payer output is missing and keeps amounts", () => {
+            transaction = new HDTransaction({ whoPayTheFee: "tb1qrzxautduewud394haxv085exvcwm9hcw72ugth", fee: 1 })
+            transaction.addInput({ txid, scriptPubKey, value: 30000, vout: 1 }, wallet.getPairKey(0))
+            transaction.addOutput({ address: payer, amount: 15000 })
+            transaction.addOutput({ address: receiver, amount: 15000 })
+
+            expect(() => transaction.resolveFee()).toThrow("Fee payer output not found")
+            expect(transaction.outputs.map(output => output.amount)).toEqual([15000, 15000])
+        })
+
+        test("everyone strategy deducts exact final estimated fee", () => {
+            transaction = new HDTransaction({ whoPayTheFee: "everyone", fee: 1 })
+            transaction.addInput({ txid, scriptPubKey, value: 30000, vout: 1 }, wallet.getPairKey(0))
+            transaction.addOutput({ address: payer, amount: 15000 })
+            transaction.addOutput({ address: receiver, amount: 15000 })
+
+            transaction.resolveFee()
+
+            expect(transaction.getFeeSats()).toBe(transaction.estimateFeeSats())
+        })
+
+        test("cache is invalidated after adding outputs post-sign", () => {
+            transaction.addInput({ txid, scriptPubKey, value: 40000, vout: 1 }, wallet.getPairKey(0))
+            transaction.addOutput({ address: payer, amount: 20000 })
+            transaction.sign()
+            const rawBefore = transaction.getRawHex()
+
+            transaction.addOutput({ address: receiver, amount: 10000 })
+            const rawAfter = transaction.getRawHex()
+
+            expect(rawAfter).not.toBe(rawBefore)
+            expect(transaction.getFeeSats()).toBe(10000)
+        })
+    })
 })
 
 

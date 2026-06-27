@@ -21,6 +21,8 @@ export interface SigParams {
  */
 export abstract class TransactionBuilder 
 {
+    protected static readonly MAX_MONEY = 21_000_000 * 100_000_000
+
     /**
      * Determines if any input is a SegWit (P2WPKH or P2WSH) input.
      * @param inputs List of transaction inputs.
@@ -40,8 +42,7 @@ export abstract class TransactionBuilder
     {
         const bytes = hexToBytes(input.scriptPubKey as string)
     
-        return ((bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14) || // P2WPKH
-            (bytes.length === 34 && bytes[0] == 0x00 && bytes[1] == 0x20))       // P2WSH
+        return bytes.length === 22 && bytes[0] == 0x00 && bytes[1] == 0x14
     }
 
     /**
@@ -52,6 +53,8 @@ export abstract class TransactionBuilder
      */
     protected buildAndSign(params: SigParams, format: BuildFormat = "raw"): Uint8Array 
     {    
+        this.validateTransaction(params.inputs, params.outputs)
+
         let witnessData = new ByteBuffer()
         
         let hexTransaction = new ByteBuffer(numberToHexLE(params.version, 32)) // version
@@ -204,6 +207,8 @@ export abstract class TransactionBuilder
      * @returns Byte array of all outputs serialized.
      */
     protected outputsRaw(outputs: OutputTransaction[]) : Uint8Array {
+        this.validateOutputsValue(outputs)
+
         const rows = outputs.map(output => {
             let txoutput = new ByteBuffer(numberToHexLE(output.amount, 64))
             let scriptPubKey = addressToScriptPubKey(output.address)
@@ -222,12 +227,24 @@ export abstract class TransactionBuilder
      */
     protected validateInput(input: InputTransaction, inputs: InputTransaction[]) : void
     {
+        if(!this.isHex(input.txid))
+            throw new Error("txid is in invalid format, expected a hexadecimal string")
         if(input.txid.length % 2 != 0)
             throw new Error("txid is in invalid format, expected a hexadecimal string")
         else if(getBytesCount(input.txid) != 32)
             throw new Error("Expected a valid txid with 32 bytes")
+        else if(input.scriptPubKey && !this.isHex(input.scriptPubKey))
+            throw new Error("scriptPubKey is in invalid format, expected a hexadecimal string")
         else if(input.scriptPubKey && input.scriptPubKey.length % 2 != 0)
             throw new Error("scriptPubKey is in invalid format, expected a hexadecimal string") 
+        else if(input.scriptPubKey && this.isUnsupportedWitnessScript(input.scriptPubKey))
+            throw new Error("P2WSH inputs are not supported")
+        else if(!Number.isSafeInteger(input.vout) || input.vout < 0)
+            throw new Error("Expected a valid vout")
+        else if(!Number.isSafeInteger(input.value) || input.value <= 0 || input.value > TransactionBuilder.MAX_MONEY)
+            throw new Error("Expected a valid input value")
+        else if(input.sequence && (!this.isHex(input.sequence) || getBytesCount(input.sequence) !== 4))
+            throw new Error("Expected a valid sequence with 4 bytes")
         if(inputs.some(i => i.txid === input.txid && i.vout === input.vout))
             throw new Error("An input with this utxo (txid:vout) has already been added")
     }
@@ -240,11 +257,68 @@ export abstract class TransactionBuilder
      */
     protected validateOutput(output: OutputTransaction, outputs: OutputTransaction[]) : void 
     {
-        if(output.amount <= 0)
+        if(!Number.isSafeInteger(output.amount) || output.amount <= 0 || output.amount > TransactionBuilder.MAX_MONEY)
             throw new Error("Expected a valid amount")
         if(!Address.isValid(output.address))
             throw new Error("Expected a valid address to output")
         if(outputs.some(o => o.address == output.address))
             throw new Error("An output with this address has already been added")
+    }
+
+    protected validateTransaction(inputs: InputTransaction[], outputs: OutputTransaction[]): void
+    {
+        if(inputs.length === 0)
+            throw new Error("Transaction must have at least one input")
+        if(outputs.length === 0)
+            throw new Error("Transaction must have at least one output")
+
+        inputs.forEach((input, index) => this.validateInput(input, inputs.slice(0, index)))
+        this.validateOutputsValue(outputs)
+
+        const inputTotal = this.sumInputs(inputs)
+        const outputTotal = this.sumOutputs(outputs)
+        if(outputTotal > inputTotal)
+            throw new Error("Transaction outputs exceed inputs")
+    }
+
+    protected sumInputs(inputs: InputTransaction[]): number
+    {
+        return inputs.reduce((sum, input) => sum + input.value, 0)
+    }
+
+    protected sumOutputs(outputs: OutputTransaction[]): number
+    {
+        return outputs.reduce((sum, output) => sum + output.amount, 0)
+    }
+
+    protected validateOutputsValue(outputs: OutputTransaction[]): void
+    {
+        outputs.forEach(output => {
+            if(!Number.isSafeInteger(output.amount) || output.amount <= 0 || output.amount > TransactionBuilder.MAX_MONEY)
+                throw new Error("Expected a valid amount")
+        })
+
+        const outputTotal = this.sumOutputs(outputs)
+        if(!Number.isSafeInteger(outputTotal) || outputTotal > TransactionBuilder.MAX_MONEY)
+            throw new Error("Expected a valid total output amount")
+    }
+
+    protected validateFeeRate(feeRate: number): void
+    {
+        if(!Number.isFinite(feeRate) || feeRate <= 0)
+            throw new Error("Expected a valid fee rate")
+    }
+
+    protected onTransactionMutated(): void {}
+
+    private isHex(value: string): boolean
+    {
+        return /^[0-9a-fA-F]+$/.test(value)
+    }
+
+    private isUnsupportedWitnessScript(scriptPubKey: string): boolean
+    {
+        const bytes = hexToBytes(scriptPubKey)
+        return bytes.length === 34 && bytes[0] === 0x00 && bytes[1] === 0x20
     }
 }

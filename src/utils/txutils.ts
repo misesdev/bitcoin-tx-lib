@@ -1,5 +1,5 @@
 import { bech32 } from "bech32"
-import { bytesToHex, hexToBytes, mergeUint8Arrays, ripemd160 } from "."
+import { bytesToHex, checksum, hexToBytes, mergeUint8Arrays, ripemd160 } from "."
 import { base58 } from "@scure/base" 
 import { OP_CODES } from "../constants/opcodes"
 
@@ -7,6 +7,15 @@ export function addressToScriptPubKey(address: string): Uint8Array {
     if(["1", "m", "n"].includes(address[0])) {
         // P2PKH Legacy
         const decoded = base58.decode(address)
+        if(decoded.length !== 25)
+            throw new Error("Invalid base58 address length")
+
+        const payload = decoded.slice(0, -4)
+        const providedChecksum = decoded.slice(-4)
+        const validChecksum = checksum(payload)
+        if(!providedChecksum.every((byte, index) => byte === validChecksum[index]))
+            throw new Error("Invalid base58 address checksum")
+
         const hash = decoded.slice(1, -4) // remove the prefix and checksum
         const prefixScript = new Uint8Array([OP_CODES.OP_DUP, OP_CODES.OP_HASH160, hash.length])
         const sufixScript = new Uint8Array([OP_CODES.OP_EQUALVERIFY, OP_CODES.OP_CHECKSIG])

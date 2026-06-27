@@ -99,6 +99,7 @@ interface SigParams {
  * Base class for building and signing Bitcoin transactions (both Legacy and SegWit).
  */
 declare abstract class TransactionBuilder {
+    protected static readonly MAX_MONEY: number;
     /**
      * Determines if any input is a SegWit (P2WPKH or P2WSH) input.
      * @param inputs List of transaction inputs.
@@ -152,6 +153,14 @@ declare abstract class TransactionBuilder {
      * @param outputs The current list of outputs.
      */
     protected validateOutput(output: OutputTransaction, outputs: OutputTransaction[]): void;
+    protected validateTransaction(inputs: InputTransaction[], outputs: OutputTransaction[]): void;
+    protected sumInputs(inputs: InputTransaction[]): number;
+    protected sumOutputs(outputs: OutputTransaction[]): number;
+    protected validateOutputsValue(outputs: OutputTransaction[]): void;
+    protected validateFeeRate(feeRate: number): void;
+    protected onTransactionMutated(): void;
+    private isHex;
+    private isUnsupportedWitnessScript;
 }
 
 /**
@@ -277,11 +286,12 @@ declare class Transaction extends BaseTransaction {
      */
     resolveFee(): void;
     /**
-     * Calculates the total fee in satoshis based on the virtual size and fee rate.
+     * Calculates the actual fee in satoshis from input total minus output total.
      *
      * @returns The transaction fee in satoshis.
      */
     getFeeSats(): number;
+    estimateFeeSats(): number;
     /**
      * Returns the raw transaction as a hex string.
      *
@@ -300,6 +310,11 @@ declare class Transaction extends BaseTransaction {
      * Clears all inputs, outputs, cache data and resets the fee state.
      */
     clear(): void;
+    protected onTransactionMutated(): void;
+    private deductFeeFromOutput;
+    private deductFeeFromEveryone;
+    private markFeeResolved;
+    private findFeePayerIndex;
 }
 
 interface HDKParams {
@@ -564,11 +579,12 @@ declare class HDTransaction extends HDTransactionBase {
      */
     resolveFee(): void;
     /**
-     * Calculates the fee in satoshis based on vBytes and configured fee rate.
+     * Calculates the actual fee in satoshis from input total minus output total.
      *
      * @returns Total transaction fee in satoshis.
      */
     getFeeSats(): number;
+    estimateFeeSats(): number;
     /**
      * Returns the raw transaction as a hex-encoded string.
      *
@@ -587,6 +603,11 @@ declare class HDTransaction extends HDTransactionBase {
      * Clears all inputs, outputs, signing keys, cache data and resets the fee state.
      */
     clear(): void;
+    protected onTransactionMutated(): void;
+    private deductFeeFromOutput;
+    private deductFeeFromEveryone;
+    private markFeeResolved;
+    private findFeePayerIndex;
 }
 
 interface HDWalletOptions {

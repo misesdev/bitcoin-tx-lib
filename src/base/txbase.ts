@@ -46,6 +46,8 @@ export abstract class BaseTransaction extends TransactionBuilder
         this.locktime = options?.locktime ?? 0
         this.whoPayTheFee = options?.whoPayTheFee
         this.fee = options?.fee
+        if(this.fee !== undefined)
+            this.validateFeeRate(this.fee)
         this.cachedata = new Map()
     }
 
@@ -65,6 +67,8 @@ export abstract class BaseTransaction extends TransactionBuilder
         if(!input.sequence) input.sequence = "fffffffd"
 
         this.inputs.push(input)
+        this.cachedata.clear()
+        this.onTransactionMutated()
     }
 
     /**
@@ -77,6 +81,8 @@ export abstract class BaseTransaction extends TransactionBuilder
         this.validateOutput(output, this.outputs)
 
         this.outputs.push(output)
+        this.cachedata.clear()
+        this.onTransactionMutated()
     }
 
     /**

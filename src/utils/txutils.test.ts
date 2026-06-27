@@ -4,9 +4,13 @@ import { bytesToHex } from "./index"
 describe("addressToScriptPubKey", () => {
 
     test("P2PKH testnet address → 25-byte P2PKH scriptPubKey", () => {
-        const address = "mzzD7VraX6Vt5XPCZqRDsBkNey9wCPks6u"
+        const address = "mzzD7VraX6Vt5XPCZqRDsBkNey9wJL7VA4"
         const result = bytesToHex(addressToScriptPubKey(address))
         expect(result).toBe("76a914d591fd84cf51bb8b325c5b11025ea02d9ae9a85d88ac")
+    })
+
+    test("P2PKH address with invalid checksum throws", () => {
+        expect(() => addressToScriptPubKey("mzzD7VraX6Vt5XPCZqRDsBkNey9wCPks6u")).toThrow("Invalid base58 address checksum")
     })
 
     test("P2PKH mainnet address (starts with 1) → valid P2PKH scriptPubKey", () => {

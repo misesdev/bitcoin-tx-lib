@@ -47,6 +47,8 @@ export abstract class HDTransactionBase extends TransactionBuilder
         this.locktime = options?.locktime ?? 0
         this.whoPayTheFee = options?.whoPayTheFee
         this.fee = options?.fee
+        if(this.fee !== undefined)
+            this.validateFeeRate(this.fee)
         this.cachedata = new Map()
     }
 
@@ -68,6 +70,8 @@ export abstract class HDTransactionBase extends TransactionBuilder
 
         this.signingKeys.set(this.getkey(input), pairkey)
         this.inputs.push(input)
+        this.cachedata.clear()
+        this.onTransactionMutated()
     }
 
     /**
@@ -80,6 +84,8 @@ export abstract class HDTransactionBase extends TransactionBuilder
         this.validateOutput(output, this.outputs)
 
         this.outputs.push(output)
+        this.cachedata.clear()
+        this.onTransactionMutated()
     }
 
     /**

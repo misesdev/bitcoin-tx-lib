@@ -156,6 +156,11 @@ describe("TransactionBuilder", () => {
             expect(() => builder.testValidateInput(bad, [])).toThrow()
         })
 
+        test("non-hex txid throws", () => {
+            const bad = { ...segwitInput, txid: "z".repeat(64) }
+            expect(() => builder.testValidateInput(bad, [])).toThrow("txid is in invalid format")
+        })
+
         test("txid with wrong byte count throws", () => {
             const bad = { ...segwitInput, txid: "abcd" }
             expect(() => builder.testValidateInput(bad, [])).toThrow("Expected a valid txid")
@@ -164,6 +169,31 @@ describe("TransactionBuilder", () => {
         test("odd-length scriptPubKey throws", () => {
             const bad = { ...segwitInput, scriptPubKey: "001" }
             expect(() => builder.testValidateInput(bad, [])).toThrow("scriptPubKey is in invalid format")
+        })
+
+        test("non-hex scriptPubKey throws", () => {
+            const bad = { ...segwitInput, scriptPubKey: "zz".repeat(22) }
+            expect(() => builder.testValidateInput(bad, [])).toThrow("scriptPubKey is in invalid format")
+        })
+
+        test("P2WSH input throws because signing it is not implemented", () => {
+            const bad = { ...segwitInput, scriptPubKey: "0020" + "ab".repeat(32) }
+            expect(() => builder.testValidateInput(bad, [])).toThrow("P2WSH inputs are not supported")
+        })
+
+        test("invalid vout throws", () => {
+            expect(() => builder.testValidateInput({ ...segwitInput, vout: -1 }, [])).toThrow("Expected a valid vout")
+            expect(() => builder.testValidateInput({ ...segwitInput, vout: 1.5 }, [])).toThrow("Expected a valid vout")
+        })
+
+        test("invalid input value throws", () => {
+            expect(() => builder.testValidateInput({ ...segwitInput, value: 0 }, [])).toThrow("Expected a valid input value")
+            expect(() => builder.testValidateInput({ ...segwitInput, value: 1.5 }, [])).toThrow("Expected a valid input value")
+        })
+
+        test("invalid sequence throws", () => {
+            expect(() => builder.testValidateInput({ ...segwitInput, sequence: "ffffff" }, [])).toThrow("Expected a valid sequence")
+            expect(() => builder.testValidateInput({ ...segwitInput, sequence: "zzzzzzzz" }, [])).toThrow("Expected a valid sequence")
         })
 
         // ── duplicate detection — anti-regression for fix #6 ─────────────────
@@ -205,6 +235,14 @@ describe("TransactionBuilder", () => {
             expect(() => builder.testValidateOutput({ ...baseOutput, amount: -1 }, [])).toThrow("valid amount")
         })
 
+        test("fractional amount throws", () => {
+            expect(() => builder.testValidateOutput({ ...baseOutput, amount: 1.5 }, [])).toThrow("valid amount")
+        })
+
+        test("amount above bitcoin max money throws", () => {
+            expect(() => builder.testValidateOutput({ ...baseOutput, amount: 2_100_000_000_000_001 }, [])).toThrow("valid amount")
+        })
+
         test("invalid address throws", () => {
             expect(() => builder.testValidateOutput({ ...baseOutput, address: "bad" }, [])).toThrow("valid address")
         })
@@ -232,6 +270,10 @@ describe("TransactionBuilder", () => {
             const one = builder.testOutputsRaw([baseOutput])
             const two = builder.testOutputsRaw([baseOutput, out2])
             expect(two.length).toBeGreaterThan(one.length)
+        })
+
+        test("invalid mutated output amount throws during serialization", () => {
+            expect(() => builder.testOutputsRaw([{ ...baseOutput, amount: -1 }])).toThrow("Expected a valid amount")
         })
     })
 })

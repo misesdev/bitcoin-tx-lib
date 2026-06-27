@@ -9,6 +9,7 @@
         "declaration": true,
         "declarationDir": "./lib",
         "sourceMap": true,
+        "skipLibCheck": true,
         "paths": {
             "@/*": ["./src/*"]
         }

@@ -254,6 +254,110 @@ describe("transaction class", () => {
         expect(transaction.outputs[0].amount).toBe(amountAfterFirst)
     })
 
+
+    describe("fee safety and consistency", () => {
+        const txid = "16945364992874171da102f987c217f3ff13bb4817957f6a030169083a8ac8f0"
+        const scriptPubKey = "0014a8439c50793b033df810de257b313144a8f7edc9"
+        const payer = "tb1q4mqy9h6km8wzltgtxra0vt4efuruhg7vh8hlvf"
+        const receiver = "tb1q4ppec5re8vpnm7qsmcjhkvf3gj500mwfw0yxaj"
+
+        test("constructor rejects invalid fee rates", () => {
+            expect(() => new Transaction(pairkey, { fee: 0 })).toThrow("Expected a valid fee rate")
+            expect(() => new Transaction(pairkey, { fee: -1 })).toThrow("Expected a valid fee rate")
+            expect(() => new Transaction(pairkey, { fee: Number.NaN })).toThrow("Expected a valid fee rate")
+        })
+
+        test("getFeeSats returns actual input minus output fee without mutating outputs", () => {
+            transaction = new Transaction(pairkey, { whoPayTheFee: payer, fee: 2 })
+            transaction.addInput({ txid, scriptPubKey, value: 30000, vout: 1 })
+            transaction.addOutput({ address: payer, amount: 15000 })
+            transaction.addOutput({ address: receiver, amount: 15000 })
+
+            expect(transaction.getFeeSats()).toBe(0)
+            expect(transaction.outputs.map(output => output.amount)).toEqual([15000, 15000])
+        })
+
+        test("manual fee is reported from transaction values", () => {
+            transaction.addInput({ txid, scriptPubKey, value: 30000, vout: 1 })
+            transaction.addOutput({ address: payer, amount: 29500 })
+
+            expect(transaction.getFeeSats()).toBe(500)
+        })
+
+        test("resolveFee throws when configured payer address is not an output", () => {
+            transaction = new Transaction(pairkey, { whoPayTheFee: "tb1qrzxautduewud394haxv085exvcwm9hcw72ugth", fee: 1 })
+            transaction.addInput({ txid, scriptPubKey, value: 30000, vout: 1 })
+            transaction.addOutput({ address: payer, amount: 15000 })
+            transaction.addOutput({ address: receiver, amount: 15000 })
+
+            expect(() => transaction.resolveFee()).toThrow("Fee payer output not found")
+            expect(transaction.outputs.map(output => output.amount)).toEqual([15000, 15000])
+        })
+
+        test("resolveFee rolls back when fee would make an output invalid", () => {
+            transaction = new Transaction(pairkey, { fee: 1000 })
+            transaction.addInput({ txid, scriptPubKey, value: 500, vout: 1 })
+            transaction.addOutput({ address: payer, amount: 400 })
+
+            expect(() => transaction.resolveFee()).toThrow("Expected a valid amount")
+            expect(transaction.outputs[0].amount).toBe(400)
+        })
+
+        test("everyone strategy deducts the exact final estimated fee", () => {
+            transaction = new Transaction(pairkey, { whoPayTheFee: "everyone", fee: 1 })
+            transaction.addInput({ txid, scriptPubKey, value: 30000, vout: 1 })
+            transaction.addOutput({ address: payer, amount: 15000 })
+            transaction.addOutput({ address: receiver, amount: 15000 })
+
+            transaction.resolveFee()
+
+            expect(transaction.getFeeSats()).toBe(transaction.estimateFeeSats())
+            expect(Math.abs(transaction.outputs[0].amount - transaction.outputs[1].amount)).toBeLessThanOrEqual(1)
+        })
+
+        test("cache is invalidated after adding outputs post-sign", () => {
+            transaction.addInput({ txid, scriptPubKey, value: 40000, vout: 1 })
+            transaction.addOutput({ address: payer, amount: 20000 })
+            transaction.sign()
+            const rawBefore = transaction.getRawHex()
+
+            transaction.addOutput({ address: receiver, amount: 10000 })
+            const rawAfter = transaction.getRawHex()
+
+            expect(rawAfter).not.toBe(rawBefore)
+            expect(transaction.getFeeSats()).toBe(10000)
+        })
+
+        test("adding an output after resolveFee resets fee resolution", () => {
+            transaction = new Transaction(pairkey, { whoPayTheFee: "everyone", fee: 1 })
+            transaction.addInput({ txid, scriptPubKey, value: 50000, vout: 1 })
+            transaction.addOutput({ address: payer, amount: 40000 })
+            transaction.resolveFee()
+
+            transaction.addOutput({ address: receiver, amount: 1000 })
+            const feeAfterMutation = transaction.getFeeSats()
+            transaction.resolveFee()
+
+            expect(transaction.getFeeSats()).toBe(feeAfterMutation + transaction.estimateFeeSats())
+        })
+
+        test("build rejects outputs that exceed inputs", () => {
+            transaction.addInput({ txid, scriptPubKey, value: 10000, vout: 1 })
+            transaction.addOutput({ address: payer, amount: 10001 })
+
+            expect(() => transaction.sign()).toThrow("Transaction outputs exceed inputs")
+        })
+
+        test("P2WSH inputs are rejected because witness stack signing is unsupported", () => {
+            expect(() => transaction.addInput({
+                txid,
+                scriptPubKey: "0020" + "ab".repeat(32),
+                value: 30000,
+                vout: 1
+            })).toThrow("P2WSH inputs are not supported")
+        })
+    })
+
     // ── SIGNATURE VALIDITY — anti-regression for @noble/curves v2 prehash bug ─
     // Before the fix, @noble/curves v2 default prehash:true caused the library to sign
     // sha256(sighash) instead of sighash. Our internal verify() was consistent (also

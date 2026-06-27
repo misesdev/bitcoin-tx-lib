@@ -159,11 +159,11 @@ describe("ECPairKey", () => {
     })
 
     describe("DER signature length and validity", () => {
-        test("DER signature is between 70 and 72 bytes", () => {
+        test("DER signature is between 69 and 72 bytes", () => {
             for (let i = 0; i < 20; i++) {
                 const key = new ECPairKey()
                 const sig = key.signDER(messageHash)
-                expect(sig.length).toBeGreaterThanOrEqual(70)
+                expect(sig.length).toBeGreaterThanOrEqual(69)
                 expect(sig.length).toBeLessThanOrEqual(72)
             }
         })

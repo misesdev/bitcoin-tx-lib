@@ -108,45 +108,55 @@ export class HDTransaction extends HDTransactionBase
     {
         if(this.feeResolved) return
 
-        if(!this.cachedata.get("txraw")) this.sign()
+        const previousAmounts = this.outputs.map(output => output.amount)
 
-        const satoshisPerOutput = Math.ceil(this.vBytes() * (this.fee??1))
+        try {
+            if(!this.cachedata.get("txraw")) this.sign()
 
-        if(this.outputs.length == 1) {
-            this.outputs[0].amount -= satoshisPerOutput
-            this.feeResolved = true
-            this.cachedata.clear()
-            return
-        }
+            const feeSats = this.estimateFeeSats()
 
-        if(this.whoPayTheFee === "everyone") {
-            const share = Math.ceil(this.vBytes() * (this.fee??1) / this.outputs.length)
-            this.outputs.forEach(out => out.amount -= share)
-            this.feeResolved = true
-            this.cachedata.clear()
-            return
-        }
-
-        for(let i = 0; i < this.outputs.length; i++) {
-            if(this.outputs[i].address === this.whoPayTheFee) {
-                this.outputs[i].amount -= satoshisPerOutput
-                this.feeResolved = true
-                this.cachedata.clear()
-                break
+            if(this.outputs.length == 1) {
+                this.deductFeeFromOutput(0, feeSats)
+                this.markFeeResolved()
+                return
             }
+
+            if(this.whoPayTheFee === "everyone") {
+                this.deductFeeFromEveryone(feeSats)
+                this.markFeeResolved()
+                return
+            }
+
+            for(let i = 0; i < this.outputs.length; i++) {
+                if(this.outputs[i].address === this.whoPayTheFee) {
+                    this.deductFeeFromOutput(i, feeSats)
+                    this.markFeeResolved()
+                    return
+                }
+            }
+
+            throw new Error("Fee payer output not found")
+        } catch(error) {
+            this.outputs.forEach((output, index) => output.amount = previousAmounts[index])
+            this.feeResolved = false
+            this.cachedata.clear()
+            throw error
         }
     }
 
     /**
-     * Calculates the fee in satoshis based on vBytes and configured fee rate.
+     * Calculates the actual fee in satoshis from input total minus output total.
      * 
      * @returns Total transaction fee in satoshis.
      */
     public getFeeSats() 
     {
-        if(this.whoPayTheFee && this.fee) this.resolveFee()
-        const feeSats = Math.ceil(this.vBytes() * (this.fee??1))
-        return feeSats
+        return this.sumInputs(this.inputs) - this.sumOutputs(this.outputs)
+    }
+
+    public estimateFeeSats()
+    {
+        return Math.ceil(this.vBytes() * (this.fee??1))
     }
 
     /**
@@ -180,6 +190,68 @@ export class HDTransaction extends HDTransactionBase
     {
         super.clear()
         this.feeResolved = false
+    }
+
+    protected override onTransactionMutated(): void
+    {
+        this.feeResolved = false
+    }
+
+    private deductFeeFromOutput(index: number, feeSats: number): void
+    {
+        const previousAmount = this.outputs[index].amount
+        this.outputs[index].amount -= feeSats
+        try {
+            this.validateTransaction(this.inputs, this.outputs)
+        } catch(error) {
+            this.outputs[index].amount = previousAmount
+            throw error
+        }
+    }
+
+    private deductFeeFromEveryone(feeSats: number): void
+    {
+        const previousAmounts = this.outputs.map(output => output.amount)
+        const baseShare = Math.floor(feeSats / this.outputs.length)
+        let remainder = feeSats % this.outputs.length
+
+        this.outputs.forEach(output => {
+            output.amount -= baseShare
+            if(remainder > 0) {
+                output.amount -= 1
+                remainder--
+            }
+        })
+
+        try {
+            this.validateTransaction(this.inputs, this.outputs)
+        } catch(error) {
+            this.outputs.forEach((output, index) => output.amount = previousAmounts[index])
+            throw error
+        }
+    }
+
+    private markFeeResolved(): void
+    {
+        this.feeResolved = true
+        this.cachedata.clear()
+        this.sign()
+        const targetFee = this.estimateFeeSats()
+        const actualFee = this.getFeeSats()
+        if(actualFee < targetFee) {
+            this.deductFeeFromOutput(this.outputs.length === 1 || this.whoPayTheFee !== "everyone" ? this.findFeePayerIndex() : 0, targetFee - actualFee)
+            this.cachedata.clear()
+            this.sign()
+        }
+    }
+
+    private findFeePayerIndex(): number
+    {
+        if(this.outputs.length === 1) return 0
+        const index = this.outputs.findIndex(output => output.address === this.whoPayTheFee)
+        if(index < 0)
+            throw new Error("Fee payer output not found")
+        return index
     }
 }
 

@@ -41,7 +41,6 @@ export class ECPairKey {
         // @noble/curves v2 defaults to prehash:true (applies SHA256 again), which would produce
         // a signature over sha256(sighash) instead of sighash, rejected by Bitcoin nodes.
         return secp256k1.sign(message, this.privateKey, {
-            extraEntropy: true,
             lowS: true,
             format: 'der',
             prehash: false,
